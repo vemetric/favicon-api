@@ -1,0 +1,44 @@
+{
+  "name": "@vemetric/favicon-api",
+  "version": "0.1.0",
+  "description": "Free and open-source API to fetch favicons from any website. Powered by vemetric.com",
+  "type": "module",
+  "main": "src/server.ts",
+  "scripts": {
+    "dev": "bun run --watch src/server.ts",
+    "start": "bun run src/server.ts",
+    "test": "bun test",
+    "test:unit": "bun test tests/unit",
+    "test:integration": "bun test tests/integration",
+    "test:watch": "bun test --watch",
+    "lint": "eslint src/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts --fix",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\"",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "favicon",
+    "api",
+    "typescript",
+    "self-hosted",
+    "vemetric"
+  ],
+  "author": "Vemetric <info@vemetric.com> (https://vemetric.com/)",
+  "license": "MIT",
+  "dependencies": {
+    "cheerio": "^1.0.0",
+    "hono": "^4.6.14",
+    "sharp": "^0.33.5",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "bun-types": "latest",
+    "typescript": "^5.6.3",
+    "@typescript-eslint/eslint-plugin": "^8.15.0",
+    "@typescript-eslint/parser": "^8.15.0",
+    "eslint": "^9.15.0",
+    "prettier": "^3.3.3"
+  }
+}
