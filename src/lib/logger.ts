@@ -5,6 +5,7 @@
  */
 
 import pino from 'pino';
+import { trackFaviconFetch } from './analytics';
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
 const isProduction = process.env.NODE_ENV === 'production';
@@ -122,6 +123,11 @@ export function logFaviconFetch(data: {
     },
     `Favicon fetch ${data.success ? 'success' : 'failed'} for ${data.url}`
   );
+
+  // Track analytics event (non-blocking)
+  trackFaviconFetch(data).catch((err) => {
+    logger.error({ err }, 'Vemetric - Failed to track event');
+  });
 }
 
 /**

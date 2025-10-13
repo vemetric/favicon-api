@@ -6,9 +6,13 @@
 import { createApp } from './index';
 import { loadConfig } from './lib/config';
 import { logger } from './lib/logger';
+import { initVemetric } from './lib/analytics';
 
 // Load and validate configuration
 const config = loadConfig();
+
+// Initialize Vemetric analytics if token is configured
+initVemetric(config.VEMETRIC_TOKEN);
 
 // Create Hono app
 const app = createApp(config);
