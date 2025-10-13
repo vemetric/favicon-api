@@ -104,6 +104,7 @@ export function logRequest(data: {
  */
 export function logFaviconFetch(data: {
   url: string;
+  faviconUrl?: string;
   source?: string;
   format?: string;
   size?: number;
@@ -111,12 +112,18 @@ export function logFaviconFetch(data: {
   success: boolean;
   duration: number;
   error?: string;
+  headers?: {
+    origin?: string;
+    referer?: string;
+    ip?: string;
+  };
 }) {
   const level = data.success ? 'info' : 'error';
   logger[level](
     {
       type: 'favicon_fetch',
       url: data.url,
+      faviconUrl: data.faviconUrl,
       source: data.source,
       format: data.format,
       response: data.response,

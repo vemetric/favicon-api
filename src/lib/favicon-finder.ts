@@ -217,7 +217,7 @@ function resolveUrl(url: string, baseUrl: string): string {
 export async function fetchBestFavicon(
   favicons: FaviconSource[],
   config: AppConfig
-): Promise<{ data: Buffer; format: string; source: string } | null> {
+): Promise<{ data: Buffer; format: string; source: string; url: string } | null> {
   for (const favicon of favicons) {
     try {
       const response = await fetch(favicon.url, {
@@ -231,7 +231,7 @@ export async function fetchBestFavicon(
 
         if (buffer.length > 0 && buffer.length <= config.MAX_IMAGE_SIZE) {
           const format = detectFormat(buffer, favicon.format);
-          return { data: buffer, format, source: favicon.source };
+          return { data: buffer, format, source: favicon.source, url: favicon.url };
         }
       }
     } catch {

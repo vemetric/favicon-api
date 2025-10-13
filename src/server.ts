@@ -12,7 +12,7 @@ import { initVemetric } from './lib/analytics';
 const config = loadConfig();
 
 // Initialize Vemetric analytics if token is configured
-initVemetric(config.VEMETRIC_TOKEN);
+initVemetric(config.VEMETRIC_TOKEN, config.VEMETRIC_HOST);
 
 // Create Hono app
 const app = createApp(config);

@@ -18,6 +18,7 @@ import {
 } from './lib/http-headers';
 import { getContentTypeFromFormat } from './lib/format-detector';
 import { logRequest, logFaviconFetch, logger } from './lib/logger';
+import { getClientIp } from './lib/request-ip';
 
 export function createApp(config: AppConfig) {
   const app = new Hono();
@@ -44,7 +45,7 @@ export function createApp(config: AppConfig) {
       statusCode: c.res.status,
       responseTime: duration,
       userAgent: c.req.header('user-agent'),
-      ip: c.req.header('x-forwarded-for') || c.req.header('x-real-ip'),
+      ip: getClientIp(c) || undefined,
     });
   });
 
@@ -56,6 +57,13 @@ export function createApp(config: AppConfig) {
   // Main favicon endpoint
   app.get('/', async (c) => {
     try {
+      // Extract request headers for analytics
+      const requestHeaders = {
+        origin: c.req.header('origin'),
+        referer: c.req.header('referer'),
+        ip: getClientIp(c) || undefined,
+      };
+
       // Validate query parameters with Zod
       const schema = queryParamsSchema(config.BLOCK_PRIVATE_IPS);
       const parseResult = schema.safeParse({
@@ -89,6 +97,7 @@ export function createApp(config: AppConfig) {
           success: false,
           duration: Date.now() - faviconStart,
           error: 'No favicons found',
+          headers: requestHeaders,
         });
         return handleFallback(c, config, response, defaultImage);
       }
@@ -99,12 +108,15 @@ export function createApp(config: AppConfig) {
       if (!favicon || !favicon.data) {
         logFaviconFetch({
           url,
+          faviconUrl: favicon?.url,
+          source: favicon?.source,
           response,
-          format,
+          format: favicon?.format || format,
           size,
           success: false,
           duration: Date.now() - faviconStart,
           error: 'Failed to fetch favicon',
+          headers: requestHeaders,
         });
         return handleFallback(c, config, response, defaultImage);
       }
@@ -112,12 +124,14 @@ export function createApp(config: AppConfig) {
       // Log successful favicon fetch
       logFaviconFetch({
         url,
+        faviconUrl: favicon.url,
         response,
         size,
         source: favicon.source,
         format: favicon.format,
         success: true,
         duration: Date.now() - faviconStart,
+        headers: requestHeaders,
       });
 
       // Process image if needed

@@ -4,6 +4,8 @@
 
 A high-performance, self-hostable favicon API service built with TypeScript, Hono, and Bun. Fetch and serve website favicons with multiple format options, intelligent fallbacks, and proper HTTP caching.
 
+**Powered by [Vemetric](https://vemetric.com)**
+
 ## Features
 
 - **Fast & Lightweight**: Built on Bun runtime and Hono framework
@@ -81,26 +83,31 @@ GET /?url=<website>&format=<json|image>&size=<number>&type=<png|jpg|ico|svg>&def
 ### Examples
 
 **Get favicon as image:**
+
 ```bash
 curl "http://localhost:3000/?url=github.com"
 ```
 
 **Get favicon metadata as JSON:**
+
 ```bash
 curl "http://localhost:3000/?url=github.com&format=json"
 ```
 
 **Resize favicon to 64x64:**
+
 ```bash
 curl "http://localhost:3000/?url=github.com&size=64"
 ```
 
 **Convert to PNG:**
+
 ```bash
 curl "http://localhost:3000/?url=github.com&type=png&size=128"
 ```
 
 **With custom fallback:**
+
 ```bash
 curl "http://localhost:3000/?url=example.com&default=https://mysite.com/fallback.png"
 ```
@@ -108,6 +115,7 @@ curl "http://localhost:3000/?url=example.com&default=https://mysite.com/fallback
 ### Response Examples
 
 **Image Response (default):**
+
 ```
 Content-Type: image/png
 Cache-Control: public, max-age=86400, s-maxage=2592000
@@ -116,6 +124,7 @@ ETag: "abc123"
 ```
 
 **JSON Response:**
+
 ```json
 {
   "url": "https://github.githubassets.com/favicons/favicon.svg",
@@ -160,11 +169,13 @@ MAX_REDIRECTS=5
 ## Architecture
 
 The application is a **stateless processor** with no built-in caching. It:
+
 1. Processes requests and finds favicons
 2. Sets proper HTTP cache headers
 3. Returns images or JSON responses
 
 For production, add a **caching layer** in front (CDN or reverse proxy):
+
 - **Cloudflare** (free tier)
 - **BunnyCDN, KeyCDN** (paid)
 - **Nginx/Caddy** (self-hosted)
@@ -199,6 +210,7 @@ bun run format
 ## Testing
 
 The project includes comprehensive integration tests covering:
+
 - Health endpoint functionality
 - Favicon fetching from real websites
 - Error handling and validation
@@ -206,6 +218,7 @@ The project includes comprehensive integration tests covering:
 - Image processing and format conversion
 
 Run tests with:
+
 ```bash
 bun test
 ```
@@ -266,12 +279,14 @@ curl http://your-server-ip:3000/health
 ### With CDN (Recommended for Production)
 
 **Cloudflare Setup:**
+
 1. Add domain to Cloudflare
 2. Point A record to your server IP
 3. Enable "Proxy" mode (orange cloud)
 4. Configure cache rules to respect origin headers
 
 **BunnyCDN Setup:**
+
 1. Create pull zone pointing to your origin
 2. Enable "Respect Cache Headers"
 3. Point CNAME to CDN hostname
@@ -293,6 +308,7 @@ curl http://your-server-ip:3000/health
 ## Favicon Sources
 
 The API searches multiple sources for favicons:
+
 1. `<link rel="icon">` tags
 2. `<link rel="apple-touch-icon">` tags
 3. `<meta property="og:image">` tags
@@ -308,11 +324,8 @@ MIT
 ## Credits
 
 Built with:
+
 - [Bun](https://bun.sh) - Fast JavaScript runtime
 - [Hono](https://hono.dev) - Lightweight web framework
 - [Sharp](https://sharp.pixelplumbing.com) - Image processing
 - [Cheerio](https://cheerio.js.org) - HTML parsing
-
----
-
-**Powered by [Vemetric](https://vemetric.com)**
