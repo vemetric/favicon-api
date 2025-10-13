@@ -58,30 +58,23 @@ async function fetchHtml(
   url: string,
   config: AppConfig
 ): Promise<{ html: string; finalUrl: string }> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), config.REQUEST_TIMEOUT);
+  const response = await fetch(url, {
+    headers: {
+      'User-Agent': config.USER_AGENT,
+    },
+    signal: AbortSignal.timeout(config.REQUEST_TIMEOUT),
+    redirect: 'follow',
+  });
 
-  try {
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': config.USER_AGENT,
-      },
-      signal: controller.signal,
-      redirect: 'follow',
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-
-    const html = await response.text();
-    // Get the final URL after any redirects
-    const finalUrl = response.url;
-
-    return { html, finalUrl };
-  } finally {
-    clearTimeout(timeout);
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
   }
+
+  const html = await response.text();
+  // Get the final URL after any redirects
+  const finalUrl = response.url;
+
+  return { html, finalUrl };
 }
 
 /**

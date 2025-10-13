@@ -19,7 +19,7 @@ export async function startTestServer(): Promise<string> {
     ...loadConfig(),
     PORT: TEST_PORT,
     // Use shorter timeouts for tests
-    REQUEST_TIMEOUT: 10000,
+    REQUEST_TIMEOUT: 2000,
     // Disable private IP blocking for tests
     BLOCK_PRIVATE_IPS: false,
   };

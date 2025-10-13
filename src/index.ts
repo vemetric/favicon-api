@@ -88,25 +88,28 @@ export function createApp(config: AppConfig) {
       const { url, response, size, format, default: defaultImage } = parseResult.data;
 
       // Find favicons
+      const timeoutPromise = new Promise<null>((resolve) =>
+        setTimeout(() => resolve(null), config.REQUEST_TIMEOUT)
+      );
       const faviconStart = Date.now();
-      const favicons = await findFavicons(url, config);
-
-      if (favicons.length === 0) {
-        logFaviconFetch({
-          url,
-          format,
-          response,
-          size,
-          success: false,
-          duration: Date.now() - faviconStart,
-          error: 'No favicons found',
-          headers: requestHeaders,
-        });
-        return handleFallback(c, config, response, defaultImage);
-      }
-
-      // Fetch best favicon
-      const favicon = await fetchBestFavicon(favicons, config);
+      const favicon = await Promise.race([
+        new Promise<{ data: Buffer; format: string; source: string; url: string } | null>(
+          // oxlint-disable-next-line no-async-promise-executor
+          async (resolve) => {
+            try {
+              const favicons = await findFavicons(url, config);
+              if (favicons == null || favicons.length === 0) {
+                resolve(null);
+              } else {
+                resolve(await fetchBestFavicon(favicons, config));
+              }
+            } catch {
+              resolve(null);
+            }
+          }
+        ),
+        timeoutPromise,
+      ]);
 
       if (!favicon || !favicon.data) {
         logFaviconFetch({
@@ -159,7 +162,7 @@ export function createApp(config: AppConfig) {
 
         const result: FaviconResult = {
           url: apiUrl.toString(),
-          sourceUrl: favicons[0]?.url || 'unknown',
+          sourceUrl: favicon?.url || 'unknown',
           width: processed.width,
           height: processed.height,
           format: processed.format,

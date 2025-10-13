@@ -22,6 +22,9 @@ const server = Bun.serve({
   port: config.PORT,
   hostname: config.HOST,
   fetch: app.fetch,
+  // Set idleTimeout higher than our application timeout to prevent Bun from timing out first
+  // Application timeout is REQUEST_TIMEOUT * 1.5, so set this to REQUEST_TIMEOUT * 2 for safety
+  idleTimeout: (config.REQUEST_TIMEOUT * 2) / 1000, // Convert ms to seconds
 });
 
 logger.info(
