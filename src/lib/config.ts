@@ -75,12 +75,15 @@ export function loadConfig(): AppConfig {
     });
 
     // Note: Don't use logger here as it may not be initialized yet
+    // eslint-disable-next-line no-console
     console.info('✓ Configuration loaded and validated successfully');
     return config;
   } catch (error) {
     if (error instanceof z.ZodError) {
+      // eslint-disable-next-line no-console
       console.error('✗ Configuration validation failed:');
       error.issues.forEach((issue) => {
+        // eslint-disable-next-line no-console
         console.error(`  - ${issue.path.join('.')}: ${issue.message}`);
       });
       throw new Error('Invalid configuration');

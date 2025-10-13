@@ -17,6 +17,7 @@ export function initVemetric(token?: string, host?: string): void {
       token,
       ...(host && { host }),
     });
+    // eslint-disable-next-line no-console
     console.info(`✓ Vemetric analytics initialized${host ? ` (host: ${host})` : ''}`);
   }
 }
