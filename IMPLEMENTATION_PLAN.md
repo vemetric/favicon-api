@@ -1,6 +1,7 @@
 # Favicon API - Implementation Plan
 
 ## Project Overview
+
 A high-performance favicon API service that fetches and serves website favicons with multiple format options, intelligent fallbacks, and proper HTTP caching. Built with TypeScript, Hono, and Bun.
 
 **Self-hostable anywhere**: Deploy via Docker on any VPS (Hetzner, DigitalOcean, AWS, home server, etc.) or any platform that supports Docker. Add a CDN or reverse proxy in front for caching (recommended for production).
@@ -8,6 +9,7 @@ A high-performance favicon API service that fetches and serves website favicons 
 **No tiers, no limitations**: Everyone gets the same features - image resizing, format conversion, all processing capabilities. There's no "paid vs self-hosted" distinction.
 
 ## Architecture
+
 ```
 User Request → [Your choice: CDN/Reverse Proxy] → Origin Server (stateless processor)
                            ↓ (handles all caching)
@@ -21,6 +23,7 @@ User Request → [Your choice: CDN/Reverse Proxy] → Origin Server (stateless p
 - **Performance**: Direct origin: ~200-500ms | With CDN/proxy (cached): <50ms globally
 
 ## Tech Stack
+
 - **Framework**: Hono (lightweight, fast)
 - **Runtime**: Bun (fast, native TypeScript)
 - **Language**: TypeScript
@@ -32,11 +35,13 @@ User Request → [Your choice: CDN/Reverse Proxy] → Origin Server (stateless p
 ## API Design
 
 ### Single Endpoint
+
 ```
-GET /?url=<website>&format=<json|image>&size=<number>&type=<png|jpg|ico|svg>&default=<url>
+GET /<website>&format=<json|image>&size=<number>&type=<png|jpg|ico|svg>&default=<url>
 ```
 
 ### Query Parameters
+
 - `url` (required): Target website URL (e.g., `example.com` or `https://example.com`)
 - `format` (optional): Response format - `image` (default) or `json`
 - `size` (optional): Desired image size in pixels (e.g., `64`, `128`, `256`)
@@ -46,6 +51,7 @@ GET /?url=<website>&format=<json|image>&size=<number>&type=<png|jpg|ico|svg>&def
 ### Response Types
 
 #### Image Response (default)
+
 ```
 Content-Type: image/png (or appropriate type)
 Cache-Control: public, max-age=86400
@@ -53,6 +59,7 @@ Cache-Control: public, max-age=86400
 ```
 
 #### JSON Response
+
 ```json
 {
   "url": "https://example.com/favicon.png",
@@ -67,6 +74,7 @@ Cache-Control: public, max-age=86400
 ## Implementation Steps
 
 ### Phase 1: Project Setup
+
 1. ✅ Initialize project structure
    - Create `package.json` with dependencies
    - Set up TypeScript configuration
@@ -80,6 +88,7 @@ Cache-Control: public, max-age=86400
    - Development: `@types/bun`, `bun-types`
 
 3. ✅ Project structure
+
    ```
    /src
      /lib
@@ -101,6 +110,7 @@ Cache-Control: public, max-age=86400
    Note: Stateless application, no caching logic - relies on external caching layer!
 
 ### Phase 2: Core Favicon Discovery
+
 4. ✅ Implement favicon finder (`favicon-finder.ts`)
    - Fetch HTML from target URL
    - Parse and extract favicon URLs from:
@@ -123,6 +133,7 @@ Cache-Control: public, max-age=86400
    - Return best match
 
 ### Phase 3: Image Processing
+
 6. ✅ Image processor (`image-processor.ts`)
    - Use Sharp for all image processing
    - Operations:
@@ -140,6 +151,7 @@ Cache-Control: public, max-age=86400
    - Quality optimization per format
 
 ### Phase 4: HTTP Cache Headers
+
 8. ✅ HTTP headers helper (`http-headers.ts`)
    - Generate proper cache headers for different response types
    - Headers to set:
@@ -153,13 +165,14 @@ Cache-Control: public, max-age=86400
    - CDN-friendly headers (works with Cloudflare, BunnyCDN, etc.)
 
 ### Phase 5: Main Application
+
 9. ✅ Hono application (`index.ts`)
-    - Single route handler `GET /`
-    - Query parameter parsing and validation
-    - Orchestrate: validate → find favicon → process image → set headers → respond
-    - Error handling with default image fallback
-    - Stateless - every request is processed fresh
-    - Proper HTTP cache headers on all responses
+   - Single route handler `GET /`
+   - Query parameter parsing and validation
+   - Orchestrate: validate → find favicon → process image → set headers → respond
+   - Error handling with default image fallback
+   - Stateless - every request is processed fresh
+   - Proper HTTP cache headers on all responses
 
 10. ✅ Configuration management
     - Environment variables:
@@ -180,6 +193,7 @@ Cache-Control: public, max-age=86400
     - Block private IP ranges (security)
 
 ### Phase 6: Bun Server
+
 12. ✅ Bun server (`server.ts`)
     - HTTP server using Bun.serve with Hono
     - Stateless request processing
@@ -189,6 +203,7 @@ Cache-Control: public, max-age=86400
     - No caching logic - relies on external caching layer
 
 ### Phase 7: Docker & Deployment
+
 13. ✅ Dockerfile
     - Use official Bun Docker image (`oven/bun:1`)
     - Install Sharp dependencies (libvips)
@@ -219,6 +234,7 @@ Cache-Control: public, max-age=86400
     - Works without any caching layer (just slower)
 
 ### Phase 8: Testing & Documentation
+
 16. ✅ Testing
     - Unit tests for core functions
     - Integration tests for API endpoints
@@ -255,6 +271,7 @@ Cache-Control: public, max-age=86400
 ### Quick Setup Overview
 
 #### Option 1: Basic Docker Deployment (Any Server)
+
 1. **Provision Server** (any VPS provider)
    - Recommended: 1-2 GB RAM, 1 CPU (e.g., Hetzner $4/month, DigitalOcean $6/month)
    - OS: Ubuntu 22.04, Debian, or any Linux with Docker support
@@ -262,6 +279,7 @@ Cache-Control: public, max-age=86400
    - Configure firewall (allow 80, 443)
 
 2. **Deploy Application**
+
    ```bash
    git clone your-repo
    cd favicon-api
@@ -273,45 +291,48 @@ Cache-Control: public, max-age=86400
 
 3. **Test**
    ```bash
-   curl http://your-server-ip:3000/?url=github.com
-   curl http://your-server-ip:3000/?url=github.com&size=64&format=json
+   curl http://your-server-ip:3000/github.com
+   curl http://your-server-ip:3000/github.com&size=64&format=json
    ```
 
 #### Option 2: With Caching Layer (Recommended for Production)
+
 Follow steps 1-2 above, then add a caching layer:
 
-**Option 2A: CDN (Cloudflare/BunnyCDN)**
-3. **Configure CDN**
-   - Add your domain to CDN provider
-   - Point DNS to your server IP (or create pull zone)
-   - Enable caching with origin header respect
-   - Set cache rules (see examples below)
-   - SSL/TLS configuration
+**Option 2A: CDN (Cloudflare/BunnyCDN)** 3. **Configure CDN**
+
+- Add your domain to CDN provider
+- Point DNS to your server IP (or create pull zone)
+- Enable caching with origin header respect
+- Set cache rules (see examples below)
+- SSL/TLS configuration
 
 4. **Test & Monitor**
    ```bash
-   curl https://api.yourdomain.com/?url=github.com
+   curl https://api.yourdomain.com/github.com
    # Check response headers for cache status
-   curl -I https://api.yourdomain.com/?url=github.com
+   curl -I https://api.yourdomain.com/github.com
    ```
+
    - Monitor CDN analytics for cache hit rate
    - Target: 95%+ cache hit rate after warmup
 
-**Option 2B: Local Reverse Proxy (Nginx/Caddy)**
-3. **Install and Configure Nginx**
-   - See Nginx configuration example below
-   - Provides local caching without external dependencies
-   - Good for single-server or private deployments
+**Option 2B: Local Reverse Proxy (Nginx/Caddy)** 3. **Install and Configure Nginx**
+
+- See Nginx configuration example below
+- Provides local caching without external dependencies
+- Good for single-server or private deployments
 
 4. **Test**
    ```bash
-   curl https://api.yourdomain.com/?url=github.com
+   curl https://api.yourdomain.com/github.com
    # Check X-Cache-Status header
    ```
 
 ## Configuration Example
 
 ### Environment Variables
+
 ```env
 # Required
 DEFAULT_IMAGE_URL=https://example.com/default-favicon.png
@@ -341,6 +362,7 @@ MAX_REDIRECTS=5
 ### Optional: CDN Configuration Examples
 
 #### Cloudflare (Free Tier)
+
 ```
 DNS:
 - A record: api.yourdomain.com → Your_Server_IP
@@ -354,6 +376,7 @@ Cache Rules (Rules → Cache Rules):
 ```
 
 #### BunnyCDN / KeyCDN / Other Pull CDNs
+
 ```
 1. Create Pull Zone pointing to your origin (http://your-server-ip:3000)
 2. Enable "Respect Cache Headers" or similar
@@ -362,6 +385,7 @@ Cache Rules (Rules → Cache Rules):
 ```
 
 #### Nginx Reverse Proxy (Local Caching)
+
 ```nginx
 proxy_cache_path /var/cache/nginx levels=1:2 keys_zone=favicon_cache:10m max_size=1g inactive=30d;
 
@@ -381,6 +405,7 @@ server {
 ```
 
 #### Without Any Caching Layer
+
 ```
 - Point your domain A record directly to your server IP
 - Use a reverse proxy like Nginx or Caddy for SSL only (no caching)
@@ -389,6 +414,7 @@ server {
 ```
 
 ## Security Considerations
+
 - ✅ Validate and sanitize all URL inputs
 - ✅ Block requests to private IP ranges (SSRF protection)
 - ✅ Set maximum file size limits
@@ -398,6 +424,7 @@ server {
 - ✅ Rate limiting (optional)
 
 ## Performance Optimizations
+
 - ✅ Stateless architecture - easy horizontal scaling
 - ✅ Proper HTTP cache headers - works with any caching layer
 - ✅ Parallel favicon discovery (check multiple sources simultaneously)
@@ -408,6 +435,7 @@ server {
 - ✅ CDN/reverse proxy recommended for caching (user's choice)
 
 ## Future Enhancements (Post-MVP)
+
 - [ ] Batch API endpoint (fetch multiple favicons)
 - [ ] Webhook support for cache invalidation
 - [ ] Analytics dashboard
@@ -417,6 +445,7 @@ server {
 - [ ] Prometheus metrics export
 
 ## Success Criteria
+
 - ✅ Successfully fetch favicons from 95%+ of websites
 - ✅ Response time < 50ms for cached requests (when using CDN/reverse proxy)
 - ✅ Response time < 500ms for direct origin requests (processing + delivery)

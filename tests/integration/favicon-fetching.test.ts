@@ -19,7 +19,7 @@ describe('Favicon Fetching', () => {
   describe('JSON Response Format', () => {
     test('should fetch GitHub favicon as JSON', async () => {
       const response = await fetchWithTimeout(
-        `${baseUrl}/?url=github.com&response=json`,
+        `${baseUrl}/github.com?response=json`,
         {},
         15000
       );
@@ -34,7 +34,7 @@ describe('Favicon Fetching', () => {
 
     test('should fetch Google favicon as JSON', async () => {
       const response = await fetchWithTimeout(
-        `${baseUrl}/?url=google.com&response=json`,
+        `${baseUrl}/google.com?response=json`,
         {},
         15000
       );
@@ -48,7 +48,7 @@ describe('Favicon Fetching', () => {
 
     test('should fetch Stack Overflow favicon as JSON', async () => {
       const response = await fetchWithTimeout(
-        `${baseUrl}/?url=stackoverflow.com&response=json`,
+        `${baseUrl}/stackoverflow.com?response=json`,
         {},
         15000
       );
@@ -62,7 +62,7 @@ describe('Favicon Fetching', () => {
 
   describe('Image Response Format', () => {
     test('should fetch GitHub favicon as image', async () => {
-      const response = await fetchWithTimeout(`${baseUrl}/?url=github.com`, {}, 15000);
+      const response = await fetchWithTimeout(`${baseUrl}/github.com`, {}, 15000);
       expect(response.status).toBe(200);
 
       const contentType = response.headers.get('content-type');
@@ -74,7 +74,7 @@ describe('Favicon Fetching', () => {
 
     test('should have correct content-type for favicon', async () => {
       const response = await fetchWithTimeout(
-        `${baseUrl}/?url=google.com`,
+        `${baseUrl}/google.com`,
         {},
         15000
       );
@@ -85,7 +85,7 @@ describe('Favicon Fetching', () => {
 
     test('should have correct content-type for SVG', async () => {
       const response = await fetchWithTimeout(
-        `${baseUrl}/?url=github.com`,
+        `${baseUrl}/github.com`,
         {},
         15000
       );
@@ -97,7 +97,7 @@ describe('Favicon Fetching', () => {
   describe('Image Processing', () => {
     test('should resize image when size parameter is provided', async () => {
       const response = await fetchWithTimeout(
-        `${baseUrl}/?url=github.com&size=64&response=json`,
+        `${baseUrl}/github.com?size=64&response=json`,
         {},
         15000
       );
@@ -113,14 +113,14 @@ describe('Favicon Fetching', () => {
 
     test('should accept size parameter within valid range', async () => {
       const response32 = await fetchWithTimeout(
-        `${baseUrl}/?url=google.com&size=32&response=json`,
+        `${baseUrl}/google.com?size=32&response=json`,
         {},
         15000
       );
       expect(response32.status).toBe(200);
 
       const response256 = await fetchWithTimeout(
-        `${baseUrl}/?url=google.com&size=256&response=json`,
+        `${baseUrl}/google.com?size=256&response=json`,
         {},
         15000
       );
@@ -131,7 +131,7 @@ describe('Favicon Fetching', () => {
   describe('URL Format Handling', () => {
     test('should handle URL without protocol', async () => {
       const response = await fetchWithTimeout(
-        `${baseUrl}/?url=github.com&response=json`,
+        `${baseUrl}/github.com?response=json`,
         {},
         15000
       );
@@ -140,7 +140,7 @@ describe('Favicon Fetching', () => {
 
     test('should handle URL with https protocol', async () => {
       const response = await fetchWithTimeout(
-        `${baseUrl}/?url=https://github.com&response=json`,
+        `${baseUrl}/https://github.com?response=json`,
         {},
         15000
       );
@@ -149,7 +149,7 @@ describe('Favicon Fetching', () => {
 
     test('should handle URL with http protocol', async () => {
       const response = await fetchWithTimeout(
-        `${baseUrl}/?url=http://info.cern.ch&response=json`,
+        `${baseUrl}/http://info.cern.ch?response=json`,
         {},
         15000
       );
@@ -162,7 +162,7 @@ describe('Favicon Fetching', () => {
     test('should follow redirects and fetch favicon from final destination', async () => {
       // vemetrics.com redirects to vemetric.com
       const response = await fetchWithTimeout(
-        `${baseUrl}/?url=vemetrics.com&response=json`,
+        `${baseUrl}/vemetrics.com?response=json`,
         {},
         15000
       );
@@ -179,7 +179,7 @@ describe('Favicon Fetching', () => {
     test('should handle redirected domain same as direct access', async () => {
       // Fetch from redirected URL
       const redirectResponse = await fetchWithTimeout(
-        `${baseUrl}/?url=vemetrics.com&response=json`,
+        `${baseUrl}/vemetrics.com?response=json`,
         {},
         15000
       );
@@ -187,7 +187,7 @@ describe('Favicon Fetching', () => {
 
       // Fetch from direct URL
       const directResponse = await fetchWithTimeout(
-        `${baseUrl}/?url=vemetric.com&response=json`,
+        `${baseUrl}/vemetric.com?response=json`,
         {},
         15000
       );

@@ -17,19 +17,16 @@ describe('Error Handling', () => {
   });
 
   describe('Missing Required Parameters', () => {
-    test('should return 400 when URL parameter is missing', async () => {
+    test('should return 404 when no path is provided', async () => {
       const response = await fetchWithTimeout(`${baseUrl}/`);
-      expect(response.status).toBe(400);
-
-      const data = await response.json();
-      expect(data.error).toBeDefined();
-      expect(data.error).toContain('URL is required');
+      // With path-based routing, hitting root without a URL should return 404
+      expect(response.status).toBe(404);
     });
   });
 
   describe('Invalid Parameters', () => {
     test('should return 400 for invalid size (too small)', async () => {
-      const response = await fetchWithTimeout(`${baseUrl}/?url=github.com&size=10`);
+      const response = await fetchWithTimeout(`${baseUrl}/github.com?size=10`);
       expect(response.status).toBe(400);
 
       const data = await response.json();
@@ -38,7 +35,7 @@ describe('Error Handling', () => {
     });
 
     test('should return 400 for invalid size (too large)', async () => {
-      const response = await fetchWithTimeout(`${baseUrl}/?url=github.com&size=600`);
+      const response = await fetchWithTimeout(`${baseUrl}/github.com?size=600`);
       expect(response.status).toBe(400);
 
       const data = await response.json();
@@ -47,7 +44,7 @@ describe('Error Handling', () => {
     });
 
     test('should return 400 for invalid size (non-numeric)', async () => {
-      const response = await fetchWithTimeout(`${baseUrl}/?url=github.com&size=abc`);
+      const response = await fetchWithTimeout(`${baseUrl}/github.com?size=abc`);
       expect(response.status).toBe(400);
 
       const data = await response.json();
@@ -55,7 +52,7 @@ describe('Error Handling', () => {
     });
 
     test('should return 400 for invalid format', async () => {
-      const response = await fetchWithTimeout(`${baseUrl}/?url=github.com&format=invalid`);
+      const response = await fetchWithTimeout(`${baseUrl}/github.com?format=invalid`);
       expect(response.status).toBe(400);
 
       const data = await response.json();
@@ -64,7 +61,7 @@ describe('Error Handling', () => {
     });
 
     test('should return 400 for invalid output format', async () => {
-      const response = await fetchWithTimeout(`${baseUrl}/?url=github.com&response=xml`);
+      const response = await fetchWithTimeout(`${baseUrl}/github.com?response=xml`);
       expect(response.status).toBe(400);
 
       const data = await response.json();
@@ -74,14 +71,14 @@ describe('Error Handling', () => {
 
   describe('Invalid URLs', () => {
     test('should return 400 for invalid URL format', async () => {
-      const response = await fetchWithTimeout(`${baseUrl}/?url=not-a-valid-url`);
+      const response = await fetchWithTimeout(`${baseUrl}/not-a-valid-url`);
       // This might succeed or fail depending on DNS, but should not crash
       expect([200, 400, 404, 500]).toContain(response.status);
     });
 
     test('should handle non-existent domain gracefully', async () => {
       const response = await fetchWithTimeout(
-        `${baseUrl}/?url=this-domain-definitely-does-not-exist-12345.com&response=json`,
+        `${baseUrl}/this-domain-definitely-does-not-exist-12345.com?response=json`,
         {},
         15000
       );
@@ -100,13 +97,6 @@ describe('Error Handling', () => {
       const corsHeader = response.headers.get('access-control-allow-origin');
       expect(corsHeader).toBeDefined();
       expect(corsHeader).toBe('*');
-    });
-  });
-
-  describe('404 Not Found', () => {
-    test('should return 404 for non-existent routes', async () => {
-      const response = await fetchWithTimeout(`${baseUrl}/non-existent-route`);
-      expect(response.status).toBe(404);
     });
   });
 });

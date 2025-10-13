@@ -19,7 +19,7 @@ describe('Cache Headers', () => {
   describe('Success Response Headers', () => {
     test('should include Cache-Control header for successful requests', async () => {
       const response = await fetchWithTimeout(
-        `${baseUrl}/?url=github.com&response=json`,
+        `${baseUrl}/github.com?response=json`,
         {},
         15000
       );
@@ -33,7 +33,7 @@ describe('Cache Headers', () => {
 
     test('should include ETag header for successful requests', async () => {
       const response = await fetchWithTimeout(
-        `${baseUrl}/?url=github.com`,
+        `${baseUrl}/github.com`,
         {},
         15000
       );
@@ -46,7 +46,7 @@ describe('Cache Headers', () => {
 
     test('should include Last-Modified header for successful requests', async () => {
       const response = await fetchWithTimeout(
-        `${baseUrl}/?url=github.com`,
+        `${baseUrl}/github.com`,
         {},
         15000
       );
@@ -62,7 +62,7 @@ describe('Cache Headers', () => {
 
     test('should include Vary header for content negotiation', async () => {
       const response = await fetchWithTimeout(
-        `${baseUrl}/?url=github.com`,
+        `${baseUrl}/github.com`,
         {},
         15000
       );
@@ -75,7 +75,7 @@ describe('Cache Headers', () => {
 
     test('should have long max-age for successful responses', async () => {
       const response = await fetchWithTimeout(
-        `${baseUrl}/?url=github.com`,
+        `${baseUrl}/github.com`,
         {},
         15000
       );
@@ -93,7 +93,7 @@ describe('Cache Headers', () => {
 
     test('should include s-maxage for CDN caching', async () => {
       const response = await fetchWithTimeout(
-        `${baseUrl}/?url=github.com`,
+        `${baseUrl}/github.com`,
         {},
         15000
       );
@@ -106,7 +106,7 @@ describe('Cache Headers', () => {
 
   describe('Error Response Headers', () => {
     test('should include Cache-Control for error responses', async () => {
-      const response = await fetchWithTimeout(`${baseUrl}/?url=github.com&size=999`);
+      const response = await fetchWithTimeout(`${baseUrl}/github.com?size=999`);
       expect(response.status).toBe(400);
 
       const cacheControl = response.headers.get('cache-control');
@@ -114,7 +114,7 @@ describe('Cache Headers', () => {
     });
 
     test('should have short cache time for errors', async () => {
-      const response = await fetchWithTimeout(`${baseUrl}/?url=github.com&size=999`);
+      const response = await fetchWithTimeout(`${baseUrl}/github.com?size=999`);
       expect(response.status).toBe(400);
 
       const cacheControl = response.headers.get('cache-control');
@@ -133,7 +133,7 @@ describe('Cache Headers', () => {
       'should return same ETag for identical requests',
       async () => {
         const response1 = await fetchWithTimeout(
-          `${baseUrl}/?url=github.com`,
+          `${baseUrl}/github.com`,
           {},
           15000
         );
@@ -143,7 +143,7 @@ describe('Cache Headers', () => {
         await new Promise((resolve) => setTimeout(resolve, 100));
 
         const response2 = await fetchWithTimeout(
-          `${baseUrl}/?url=github.com`,
+          `${baseUrl}/github.com`,
           {},
           15000
         );

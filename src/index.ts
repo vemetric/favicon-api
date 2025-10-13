@@ -54,8 +54,8 @@ export function createApp(config: AppConfig) {
     return c.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
-  // Main favicon endpoint
-  app.get('/', async (c) => {
+  // Main favicon endpoint - uses path parameter for URL
+  app.get('/:url{.+}', async (c) => {
     try {
       // Extract request headers for analytics
       const requestHeaders = {
@@ -64,10 +64,13 @@ export function createApp(config: AppConfig) {
         ip: getClientIp(c) || undefined,
       };
 
+      // Get URL from path parameter
+      const urlParam = c.req.param('url');
+
       // Validate query parameters with Zod
       const schema = queryParamsSchema(config.BLOCK_PRIVATE_IPS);
       const parseResult = schema.safeParse({
-        url: c.req.query('url'),
+        url: urlParam,
         response: c.req.query('response'),
         size: c.req.query('size'),
         format: c.req.query('format'),
@@ -144,9 +147,8 @@ export function createApp(config: AppConfig) {
       if (response === 'json') {
         // Build API URL for the processed image
         const requestUrl = new URL(c.req.url);
-        const apiUrl = new URL(requestUrl.origin + requestUrl.pathname);
-        // Use original query parameter to preserve user input format
-        apiUrl.searchParams.set('url', c.req.query('url') || url);
+        // Use the original path parameter to preserve user input format
+        const apiUrl = new URL(requestUrl.origin + '/' + (c.req.param('url') || url));
         if (size) {
           apiUrl.searchParams.set('size', size.toString());
         }
@@ -232,12 +234,9 @@ async function handleFallback(
     if (response === 'json') {
       // Build API URL for the default image
       const requestUrl = new URL(c.req.url);
-      const apiUrl = new URL(requestUrl.origin + requestUrl.pathname);
-      // Use original query parameter to preserve user input format
-      const originalUrl = c.req.query('url');
-      if (originalUrl) {
-        apiUrl.searchParams.set('url', originalUrl);
-      }
+      // Use original path parameter to preserve user input format
+      const originalUrl = c.req.param('url');
+      const apiUrl = new URL(requestUrl.origin + '/' + (originalUrl || ''));
       if (defaultImage) {
         apiUrl.searchParams.set('default', defaultImage);
       }

@@ -69,7 +69,7 @@ curl http://localhost:3000/health
 ### Single Endpoint
 
 ```
-GET /?url=<website>&format=<json|image>&size=<number>&type=<png|jpg|ico|svg>&default=<url>
+GET /<domain>&format=<json|image>&size=<number>&type=<png|jpg|ico|svg>&default=<url>
 ```
 
 ### Query Parameters
@@ -85,31 +85,31 @@ GET /?url=<website>&format=<json|image>&size=<number>&type=<png|jpg|ico|svg>&def
 **Get favicon as image:**
 
 ```bash
-curl "http://localhost:3000/?url=github.com"
+curl "http://localhost:3000/github.com"
 ```
 
 **Get favicon metadata as JSON:**
 
 ```bash
-curl "http://localhost:3000/?url=github.com&format=json"
+curl "http://localhost:3000/github.com&format=json"
 ```
 
 **Resize favicon to 64x64:**
 
 ```bash
-curl "http://localhost:3000/?url=github.com&size=64"
+curl "http://localhost:3000/github.com&size=64"
 ```
 
 **Convert to PNG:**
 
 ```bash
-curl "http://localhost:3000/?url=github.com&type=png&size=128"
+curl "http://localhost:3000/github.com&type=png&size=128"
 ```
 
 **With custom fallback:**
 
 ```bash
-curl "http://localhost:3000/?url=example.com&default=https://mysite.com/fallback.png"
+curl "http://localhost:3000/example.com&default=https://mysite.com/fallback.png"
 ```
 
 ### Response Examples
