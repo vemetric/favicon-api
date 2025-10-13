@@ -44,7 +44,11 @@ export async function initializeFallbackImage(config: AppConfig): Promise<void> 
       cachedFallback = await loadLocalDefaultSvg();
 
       logger.info(
-        { sourceUrl: cachedFallback.sourceUrl, format: cachedFallback.format, size: cachedFallback.buffer.length },
+        {
+          sourceUrl: cachedFallback.sourceUrl,
+          format: cachedFallback.format,
+          size: cachedFallback.buffer.length,
+        },
         'Fallback image cached successfully'
       );
       return;
@@ -76,13 +80,20 @@ export async function initializeFallbackImage(config: AppConfig): Promise<void> 
       'Fallback image cached successfully'
     );
   } catch (error) {
-    logger.error({ err: error }, 'Error fetching default image at boot, falling back to local default.svg');
+    logger.error(
+      { err: error },
+      'Error fetching default image at boot, falling back to local default.svg'
+    );
 
     // Fallback to local default.svg if remote fetch fails
     cachedFallback = await loadLocalDefaultSvg();
 
     logger.info(
-      { sourceUrl: cachedFallback.sourceUrl, format: cachedFallback.format, size: cachedFallback.buffer.length },
+      {
+        sourceUrl: cachedFallback.sourceUrl,
+        format: cachedFallback.format,
+        size: cachedFallback.buffer.length,
+      },
       'Fallback image cached successfully (local default)'
     );
   }
