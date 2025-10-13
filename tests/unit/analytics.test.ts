@@ -9,240 +9,268 @@ describe('Analytics Utilities', () => {
   describe('extractUserIdentifier', () => {
     describe('Priority 1: Origin header', () => {
       test('should extract domain from Origin header', () => {
-        const identifier = extractUserIdentifier({
+        const result = extractUserIdentifier({
           origin: 'https://example.com',
         });
 
-        expect(identifier).toBe('example.com');
+        expect(result.identifier).toBe('example.com');
+        expect(result.source).toBe('origin');
       });
 
       test('should extract domain from Origin with subdomain', () => {
-        const identifier = extractUserIdentifier({
+        const result = extractUserIdentifier({
           origin: 'https://app.example.com',
         });
 
-        expect(identifier).toBe('app.example.com');
+        expect(result.identifier).toBe('app.example.com');
+        expect(result.source).toBe('origin');
       });
 
       test('should extract domain from Origin with port', () => {
-        const identifier = extractUserIdentifier({
+        const result = extractUserIdentifier({
           origin: 'https://example.com:8080',
         });
 
-        expect(identifier).toBe('example.com');
+        expect(result.identifier).toBe('example.com');
+        expect(result.source).toBe('origin');
       });
 
       test('should prefer Origin over Referer', () => {
-        const identifier = extractUserIdentifier({
+        const result = extractUserIdentifier({
           origin: 'https://example.com',
           referer: 'https://different.com/page',
         });
 
-        expect(identifier).toBe('example.com');
+        expect(result.identifier).toBe('example.com');
+        expect(result.source).toBe('origin');
       });
 
       test('should prefer Origin over IP', () => {
-        const identifier = extractUserIdentifier({
+        const result = extractUserIdentifier({
           origin: 'https://example.com',
           ip: '192.168.1.1',
         });
 
-        expect(identifier).toBe('example.com');
+        expect(result.identifier).toBe('example.com');
+        expect(result.source).toBe('origin');
       });
     });
 
     describe('Priority 2: Referer header', () => {
       test('should extract domain from Referer header when no Origin', () => {
-        const identifier = extractUserIdentifier({
+        const result = extractUserIdentifier({
           referer: 'https://example.com/some/path',
         });
 
-        expect(identifier).toBe('example.com');
+        expect(result.identifier).toBe('example.com');
+        expect(result.source).toBe('referer');
       });
 
       test('should extract domain from Referer with query params', () => {
-        const identifier = extractUserIdentifier({
+        const result = extractUserIdentifier({
           referer: 'https://example.com/page?param=value',
         });
 
-        expect(identifier).toBe('example.com');
+        expect(result.identifier).toBe('example.com');
+        expect(result.source).toBe('referer');
       });
 
       test('should extract domain from Referer with hash', () => {
-        const identifier = extractUserIdentifier({
+        const result = extractUserIdentifier({
           referer: 'https://example.com/page#section',
         });
 
-        expect(identifier).toBe('example.com');
+        expect(result.identifier).toBe('example.com');
+        expect(result.source).toBe('referer');
       });
 
       test('should prefer Referer over IP', () => {
-        const identifier = extractUserIdentifier({
+        const result = extractUserIdentifier({
           referer: 'https://example.com',
           ip: '192.168.1.1',
         });
 
-        expect(identifier).toBe('example.com');
+        expect(result.identifier).toBe('example.com');
+        expect(result.source).toBe('referer');
       });
     });
 
     describe('Priority 3: Hashed IP', () => {
       test('should create hashed identifier from IP when no Origin/Referer', () => {
-        const identifier = extractUserIdentifier({
+        const result = extractUserIdentifier({
           ip: '192.168.1.1',
         });
 
-        expect(identifier).toMatch(/^api-[a-f0-9]{16}$/);
+        expect(result.identifier).toMatch(/^api-[a-f0-9]{16}$/);
+        expect(result.source).toBe('ip');
       });
 
       test('should create consistent hash for same IP on same day', () => {
         const ip = '192.168.1.1';
-        const identifier1 = extractUserIdentifier({ ip });
-        const identifier2 = extractUserIdentifier({ ip });
+        const result1 = extractUserIdentifier({ ip });
+        const result2 = extractUserIdentifier({ ip });
 
-        expect(identifier1).toBe(identifier2);
+        expect(result1.identifier).toBe(result2.identifier);
+        expect(result1.source).toBe('ip');
+        expect(result2.source).toBe('ip');
       });
 
       test('should create different hashes for different IPs', () => {
-        const identifier1 = extractUserIdentifier({ ip: '192.168.1.1' });
-        const identifier2 = extractUserIdentifier({ ip: '192.168.1.2' });
+        const result1 = extractUserIdentifier({ ip: '192.168.1.1' });
+        const result2 = extractUserIdentifier({ ip: '192.168.1.2' });
 
-        expect(identifier1).not.toBe(identifier2);
+        expect(result1.identifier).not.toBe(result2.identifier);
       });
 
       test('should handle IPv6 addresses', () => {
-        const identifier = extractUserIdentifier({
+        const result = extractUserIdentifier({
           ip: '2001:0db8:85a3:0000:0000:8a2e:0370:7334',
         });
 
-        expect(identifier).toMatch(/^api-[a-f0-9]{16}$/);
+        expect(result.identifier).toMatch(/^api-[a-f0-9]{16}$/);
+        expect(result.source).toBe('ip');
       });
 
       test('should create consistent hash for same IPv6', () => {
         const ip = '2001:0db8:85a3::8a2e:0370:7334';
-        const identifier1 = extractUserIdentifier({ ip });
-        const identifier2 = extractUserIdentifier({ ip });
+        const result1 = extractUserIdentifier({ ip });
+        const result2 = extractUserIdentifier({ ip });
 
-        expect(identifier1).toBe(identifier2);
+        expect(result1.identifier).toBe(result2.identifier);
+        expect(result1.source).toBe('ip');
+        expect(result2.source).toBe('ip');
       });
     });
 
     describe('Fallback: Unknown', () => {
       test('should return "unknown" when no headers provided', () => {
-        const identifier = extractUserIdentifier({});
+        const result = extractUserIdentifier({});
 
-        expect(identifier).toBe('unknown');
+        expect(result.identifier).toBe('unknown');
+        expect(result.source).toBe('unknown');
       });
 
       test('should return "unknown" when all headers are undefined', () => {
-        const identifier = extractUserIdentifier({
+        const result = extractUserIdentifier({
           origin: undefined,
           referer: undefined,
           ip: undefined,
         });
 
-        expect(identifier).toBe('unknown');
+        expect(result.identifier).toBe('unknown');
+        expect(result.source).toBe('unknown');
       });
     });
 
     describe('Edge Cases', () => {
       test('should handle URL without protocol in Origin', () => {
-        const identifier = extractUserIdentifier({
+        const result = extractUserIdentifier({
           origin: 'example.com',
         });
 
-        expect(identifier).toBe('example.com');
+        expect(result.identifier).toBe('example.com');
+        expect(result.source).toBe('origin');
       });
 
       test('should handle URL without protocol in Referer', () => {
-        const identifier = extractUserIdentifier({
+        const result = extractUserIdentifier({
           referer: 'example.com',
         });
 
-        expect(identifier).toBe('example.com');
+        expect(result.identifier).toBe('example.com');
+        expect(result.source).toBe('referer');
       });
 
       test('should handle localhost in Origin', () => {
-        const identifier = extractUserIdentifier({
+        const result = extractUserIdentifier({
           origin: 'http://localhost:3000',
         });
 
-        expect(identifier).toBe('localhost');
+        expect(result.identifier).toBe('localhost');
+        expect(result.source).toBe('origin');
       });
 
       test('should handle IP address in Origin', () => {
-        const identifier = extractUserIdentifier({
+        const result = extractUserIdentifier({
           origin: 'http://192.168.1.100:8080',
         });
 
-        expect(identifier).toBe('192.168.1.100');
+        expect(result.identifier).toBe('192.168.1.100');
+        expect(result.source).toBe('origin');
       });
 
       test('should return "unknown" for invalid Origin URL', () => {
-        const identifier = extractUserIdentifier({
+        const result = extractUserIdentifier({
           origin: '://invalid',
         });
 
         // Falls through to unknown since Origin parsing fails
-        expect(identifier).toBe('unknown');
+        expect(result.identifier).toBe('unknown');
+        expect(result.source).toBe('origin');
       });
 
       test('should return "unknown" for invalid Referer URL', () => {
-        const identifier = extractUserIdentifier({
+        const result = extractUserIdentifier({
           referer: '://invalid',
         });
 
         // Falls through to unknown since Referer parsing fails
-        expect(identifier).toBe('unknown');
+        expect(result.identifier).toBe('unknown');
+        expect(result.source).toBe('referer');
       });
 
       test('should handle empty strings', () => {
-        const identifier = extractUserIdentifier({
+        const result = extractUserIdentifier({
           origin: '',
           referer: '',
           ip: '',
         });
 
-        expect(identifier).toBe('unknown');
+        expect(result.identifier).toBe('unknown');
+        expect(result.source).toBe('unknown');
       });
     });
 
     describe('Real-world Scenarios', () => {
       test('should handle typical browser request', () => {
-        const identifier = extractUserIdentifier({
+        const result = extractUserIdentifier({
           origin: 'https://mywebsite.com',
           referer: 'https://mywebsite.com/page',
           ip: '203.0.113.45',
         });
 
-        expect(identifier).toBe('mywebsite.com');
+        expect(result.identifier).toBe('mywebsite.com');
+        expect(result.source).toBe('origin');
       });
 
       test('should handle API-to-API request', () => {
-        const identifier = extractUserIdentifier({
+        const result = extractUserIdentifier({
           ip: '203.0.113.45',
         });
 
-        expect(identifier).toMatch(/^api-[a-f0-9]{16}$/);
-        expect(identifier).not.toContain('203.0.113.45'); // IP should be hashed
+        expect(result.identifier).toMatch(/^api-[a-f0-9]{16}$/);
+        expect(result.identifier).not.toContain('203.0.113.45'); // IP should be hashed
+        expect(result.source).toBe('ip');
       });
 
       test('should handle request from CDN', () => {
-        const identifier = extractUserIdentifier({
+        const result = extractUserIdentifier({
           origin: 'https://cdn.example.com',
           ip: '104.16.132.229', // Cloudflare IP
         });
 
-        expect(identifier).toBe('cdn.example.com');
+        expect(result.identifier).toBe('cdn.example.com');
+        expect(result.source).toBe('origin');
       });
 
       test('should handle request with only Referer (older browsers)', () => {
-        const identifier = extractUserIdentifier({
+        const result = extractUserIdentifier({
           referer: 'https://oldsite.com/legacy-page',
           ip: '198.51.100.10',
         });
 
-        expect(identifier).toBe('oldsite.com');
+        expect(result.identifier).toBe('oldsite.com');
+        expect(result.source).toBe('referer');
       });
     });
   });
