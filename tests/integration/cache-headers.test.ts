@@ -19,7 +19,7 @@ describe('Cache Headers', () => {
   describe('Success Response Headers', () => {
     test('should include Cache-Control header for successful requests', async () => {
       const response = await fetchWithTimeout(
-        `${baseUrl}/?url=github.com&format=json`,
+        `${baseUrl}/?url=github.com&response=json`,
         {},
         15000
       );

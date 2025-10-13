@@ -55,7 +55,7 @@ describe('Error Handling', () => {
     });
 
     test('should return 400 for invalid format', async () => {
-      const response = await fetchWithTimeout(`${baseUrl}/?url=github.com&type=invalid`);
+      const response = await fetchWithTimeout(`${baseUrl}/?url=github.com&format=invalid`);
       expect(response.status).toBe(400);
 
       const data = await response.json();
@@ -64,7 +64,7 @@ describe('Error Handling', () => {
     });
 
     test('should return 400 for invalid output format', async () => {
-      const response = await fetchWithTimeout(`${baseUrl}/?url=github.com&format=xml`);
+      const response = await fetchWithTimeout(`${baseUrl}/?url=github.com&response=xml`);
       expect(response.status).toBe(400);
 
       const data = await response.json();
@@ -81,12 +81,16 @@ describe('Error Handling', () => {
 
     test('should handle non-existent domain gracefully', async () => {
       const response = await fetchWithTimeout(
-        `${baseUrl}/?url=this-domain-definitely-does-not-exist-12345.com&format=json`,
+        `${baseUrl}/?url=this-domain-definitely-does-not-exist-12345.com&response=json`,
         {},
         15000
       );
-      // Should either return 404 or 500, but not crash
-      expect([404, 500]).toContain(response.status);
+      // Should return 200 with default fallback image
+      expect(response.status).toBe(200);
+
+      const data = await response.json();
+      expect(data.source).toBe('default');
+      expect(data.sourceUrl).toBe('default.svg');
     });
   });
 

@@ -17,7 +17,7 @@ import {
   generateErrorHeaders,
 } from './lib/http-headers';
 import { getContentTypeFromFormat } from './lib/format-detector';
-import { logRequest, logFaviconFetch } from './lib/logger';
+import { logRequest, logFaviconFetch, logger } from './lib/logger';
 
 export function createApp(config: AppConfig) {
   const app = new Hono();
@@ -60,9 +60,9 @@ export function createApp(config: AppConfig) {
       const schema = queryParamsSchema(config.BLOCK_PRIVATE_IPS);
       const parseResult = schema.safeParse({
         url: c.req.query('url'),
-        format: c.req.query('format'),
+        response: c.req.query('response'),
         size: c.req.query('size'),
-        type: c.req.query('type'),
+        format: c.req.query('format'),
         default: c.req.query('default'),
       });
 
@@ -74,7 +74,7 @@ export function createApp(config: AppConfig) {
         return c.json({ error: errorMessage }, 400, headers);
       }
 
-      const { url, format, size, type, default: defaultImage } = parseResult.data;
+      const { url, response, size, format, default: defaultImage } = parseResult.data;
 
       // Find favicons
       const faviconStart = Date.now();
@@ -83,13 +83,14 @@ export function createApp(config: AppConfig) {
       if (favicons.length === 0) {
         logFaviconFetch({
           url,
-          requestFormat: format,
-          requestSize: size,
+          format,
+          response,
+          size,
           success: false,
           duration: Date.now() - faviconStart,
           error: 'No favicons found',
         });
-        return handleFallback(c, config, format, defaultImage);
+        return handleFallback(c, config, response, defaultImage);
       }
 
       // Fetch best favicon
@@ -98,20 +99,21 @@ export function createApp(config: AppConfig) {
       if (!favicon || !favicon.data) {
         logFaviconFetch({
           url,
-          requestFormat: format,
-          requestSize: size,
+          response,
+          format,
+          size,
           success: false,
           duration: Date.now() - faviconStart,
           error: 'Failed to fetch favicon',
         });
-        return handleFallback(c, config, format, defaultImage);
+        return handleFallback(c, config, response, defaultImage);
       }
 
       // Log successful favicon fetch
       logFaviconFetch({
         url,
-        requestFormat: format,
-        requestSize: size,
+        response,
+        size,
         source: favicon.source,
         format: favicon.format,
         success: true,
@@ -121,13 +123,27 @@ export function createApp(config: AppConfig) {
       // Process image if needed
       const processed = await processImage(favicon.data, {
         size,
-        format: type,
+        format,
       });
 
-      // Return response based on format
-      if (format === 'json') {
+      // Return response based on response type
+      if (response === 'json') {
+        // Build API URL for the processed image
+        const requestUrl = new URL(c.req.url);
+        const apiUrl = new URL(requestUrl.origin + requestUrl.pathname);
+        // Use original query parameter to preserve user input format
+        apiUrl.searchParams.set('url', c.req.query('url') || url);
+        if (size) {
+          apiUrl.searchParams.set('size', size.toString());
+        }
+        if (format) {
+          apiUrl.searchParams.set('format', format);
+        }
+        // Don't include response=json since we want the image URL
+
         const result: FaviconResult = {
-          url: favicons[0]?.url || favicon.data.toString(),
+          url: apiUrl.toString(),
+          sourceUrl: favicons[0]?.url || 'unknown',
           width: processed.width,
           height: processed.height,
           format: processed.format,
@@ -148,7 +164,7 @@ export function createApp(config: AppConfig) {
         'Content-Type': contentType,
       });
     } catch (error) {
-      console.error('Error processing request:', error);
+      logger.error({ err: error }, 'Error processing request');
       const headers = generateErrorHeaders(config);
       return c.json({ error: 'Internal server error' }, 500, headers);
     }
@@ -163,36 +179,61 @@ export function createApp(config: AppConfig) {
 async function handleFallback(
   c: Context,
   config: AppConfig,
-  format: OutputFormat,
+  response: OutputFormat,
   defaultImage?: string
 ) {
   const fallbackUrl = defaultImage || config.DEFAULT_IMAGE_URL;
 
-  if (!fallbackUrl) {
-    const headers = generateErrorHeaders(config);
-    return c.json({ error: 'No favicon found and no default image configured' }, 404, headers);
-  }
-
   try {
-    // Fetch default image
-    const response = await fetch(fallbackUrl, {
-      headers: { 'User-Agent': config.USER_AGENT },
-      signal: AbortSignal.timeout(config.REQUEST_TIMEOUT),
-    });
+    let buffer: Buffer;
+    let imageFormat: string;
+    let sourceUrl: string;
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch default image');
+    // Use local default.svg if no fallback URL is provided
+    if (!fallbackUrl) {
+      const defaultSvgPath = new URL('./default.svg', import.meta.url).pathname;
+      const file = Bun.file(defaultSvgPath);
+      const arrayBuffer = await file.arrayBuffer();
+      buffer = Buffer.from(arrayBuffer);
+      imageFormat = 'svg';
+      sourceUrl = 'default.svg';
+    } else {
+      // Fetch default image from URL
+      const response = await fetch(fallbackUrl, {
+        headers: { 'User-Agent': config.USER_AGENT },
+        signal: AbortSignal.timeout(config.REQUEST_TIMEOUT),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch default image');
+      }
+
+      const arrayBuffer = await response.arrayBuffer();
+      buffer = Buffer.from(arrayBuffer);
+      // Detect format from URL or assume PNG
+      imageFormat = fallbackUrl.endsWith('.svg') ? 'svg' : 'png';
+      sourceUrl = fallbackUrl;
     }
 
-    const arrayBuffer = await response.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    if (response === 'json') {
+      // Build API URL for the default image
+      const requestUrl = new URL(c.req.url);
+      const apiUrl = new URL(requestUrl.origin + requestUrl.pathname);
+      // Use original query parameter to preserve user input format
+      const originalUrl = c.req.query('url');
+      if (originalUrl) {
+        apiUrl.searchParams.set('url', originalUrl);
+      }
+      if (defaultImage) {
+        apiUrl.searchParams.set('default', defaultImage);
+      }
 
-    if (format === 'json') {
       const result: FaviconResult = {
-        url: fallbackUrl,
+        url: apiUrl.toString(),
+        sourceUrl,
         width: 0,
         height: 0,
-        format: 'png',
+        format: imageFormat,
         size: buffer.length,
         source: 'default',
       };
@@ -202,12 +243,13 @@ async function handleFallback(
     }
 
     const headers = generateDefaultHeaders(config);
+    const contentType = imageFormat === 'svg' ? 'image/svg+xml' : 'image/png';
     return c.body(new Uint8Array(buffer), 200, {
       ...headers,
-      'Content-Type': 'image/png',
+      'Content-Type': contentType,
     });
   } catch (error) {
-    console.error('Error fetching default image:', error);
+    logger.error({ err: error }, 'Error fetching default image');
     const headers = generateErrorHeaders(config);
     return c.json({ error: 'Failed to fetch default image' }, 500, headers);
   }

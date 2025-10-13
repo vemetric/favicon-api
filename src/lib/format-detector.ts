@@ -48,9 +48,13 @@ export function detectFormatFromBuffer(buffer: Buffer): string {
   // WebP: RIFF ... WEBP (check RIFF header)
   if (buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46) {
     // Verify WEBP signature at offset 8
-    if (buffer.length >= 12 &&
-        buffer[8] === 0x57 && buffer[9] === 0x45 &&
-        buffer[10] === 0x42 && buffer[11] === 0x50) {
+    if (
+      buffer.length >= 12 &&
+      buffer[8] === 0x57 &&
+      buffer[9] === 0x45 &&
+      buffer[10] === 0x42 &&
+      buffer[11] === 0x50
+    ) {
       return 'webp';
     }
   }
@@ -61,9 +65,13 @@ export function detectFormatFromBuffer(buffer: Buffer): string {
   }
 
   // AVIF: Check for ftyp box with avif brand
-  if (buffer.length >= 12 &&
-      buffer[4] === 0x66 && buffer[5] === 0x74 &&
-      buffer[6] === 0x79 && buffer[7] === 0x70) {
+  if (
+    buffer.length >= 12 &&
+    buffer[4] === 0x66 &&
+    buffer[5] === 0x74 &&
+    buffer[6] === 0x79 &&
+    buffer[7] === 0x70
+  ) {
     const brand = buffer.toString('utf8', 8, 12);
     if (brand === 'avif' || brand === 'avis') {
       return 'avif';

@@ -16,16 +16,15 @@ export async function findFavicons(url: string, config: AppConfig): Promise<Favi
   try {
     // Ensure URL has protocol
     const targetUrl = url.startsWith('http') ? url : `https://${url}`;
-    const parsedUrl = new URL(targetUrl);
-    const baseUrl = `${parsedUrl.protocol}//${parsedUrl.hostname}`;
 
-    // Fetch HTML content
-    const html = await fetchHtml(targetUrl, config);
+    // Fetch HTML content and get final URL after redirects
+    const { html, finalUrl } = await fetchHtml(targetUrl, config);
+    const parsedUrl = new URL(finalUrl);
+    const baseUrl = `${parsedUrl.protocol}//${parsedUrl.hostname}`;
     const $ = cheerio.load(html);
 
-    // Extract favicons from HTML
+    // Extract favicons from HTML (only link tags, no OG images)
     favicons.push(...extractFromLinkTags($, baseUrl));
-    favicons.push(...extractFromMetaTags($, baseUrl));
 
     // Add common fallback locations
     favicons.push({
@@ -43,8 +42,9 @@ export async function findFavicons(url: string, config: AppConfig): Promise<Favi
     // Try to fetch and parse manifest.json
     const manifestFavicons = await extractFromManifest(baseUrl, config);
     favicons.push(...manifestFavicons);
-  } catch (error) {
-    console.error('Error finding favicons:', error);
+  } catch {
+    // Error finding favicons - return whatever we found so far
+    // This is expected for some websites (timeout, network issues, etc.)
   }
 
   // Sort by score (highest first) and return
@@ -52,9 +52,12 @@ export async function findFavicons(url: string, config: AppConfig): Promise<Favi
 }
 
 /**
- * Fetch HTML content from URL
+ * Fetch HTML content from URL and return final URL after redirects
  */
-async function fetchHtml(url: string, config: AppConfig): Promise<string> {
+async function fetchHtml(
+  url: string,
+  config: AppConfig
+): Promise<{ html: string; finalUrl: string }> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), config.REQUEST_TIMEOUT);
 
@@ -71,7 +74,11 @@ async function fetchHtml(url: string, config: AppConfig): Promise<string> {
       throw new Error(`HTTP ${response.status}`);
     }
 
-    return await response.text();
+    const html = await response.text();
+    // Get the final URL after any redirects
+    const finalUrl = response.url;
+
+    return { html, finalUrl };
   } finally {
     clearTimeout(timeout);
   }
@@ -102,24 +109,6 @@ function extractFromLinkTags($: cheerio.CheerioAPI, baseUrl: string): FaviconSou
       score,
     });
   });
-
-  return favicons;
-}
-
-/**
- * Extract favicon from Open Graph meta tags
- */
-function extractFromMetaTags($: cheerio.CheerioAPI, baseUrl: string): FaviconSource[] {
-  const favicons: FaviconSource[] = [];
-
-  const ogImage = $('meta[property="og:image"]').attr('content');
-  if (ogImage) {
-    favicons.push({
-      url: resolveUrl(ogImage, baseUrl),
-      source: 'og-image',
-      score: 30,
-    });
-  }
 
   return favicons;
 }

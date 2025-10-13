@@ -7,8 +7,9 @@
 import pino from 'pino';
 import { trackFaviconFetch } from './analytics';
 
-const isDevelopment = process.env.NODE_ENV !== 'production';
+const isDevelopment = process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test';
 const isProduction = process.env.NODE_ENV === 'production';
+const isTest = process.env.NODE_ENV === 'test' || process.env.BUN_ENV === 'test';
 
 // Check if Axiom is configured
 const hasAxiomConfig = Boolean(
@@ -19,30 +20,33 @@ const hasAxiomConfig = Boolean(
  * Create configured logger instance
  */
 export const logger = pino({
-  level: process.env.LOG_LEVEL || (isDevelopment ? 'debug' : 'info'),
+  level: process.env.LOG_LEVEL || (isTest ? 'silent' : isDevelopment ? 'debug' : 'info'),
 
   // Transport configuration
-  transport: isDevelopment
-    ? // Development: pretty console output
-      {
-        target: 'pino-pretty',
-        options: {
-          colorize: true,
-          translateTime: 'HH:MM:ss',
-          ignore: 'pid,hostname',
-        },
-      }
-    : hasAxiomConfig
-      ? // Production with Axiom: send to Axiom
+  transport: isTest
+    ? // Test: no transport needed (silent)
+      undefined
+    : isDevelopment
+      ? // Development: pretty console output
         {
-          target: '@axiomhq/pino',
+          target: 'pino-pretty',
           options: {
-            dataset: process.env.AXIOM_DATASET,
-            token: process.env.AXIOM_TOKEN,
+            colorize: true,
+            translateTime: 'HH:MM:ss',
+            ignore: 'pid,hostname',
           },
         }
-      : // Production without Axiom: JSON to stdout
-        undefined,
+      : hasAxiomConfig
+        ? // Production with Axiom: send to Axiom
+          {
+            target: '@axiomhq/pino',
+            options: {
+              dataset: process.env.AXIOM_DATASET,
+              token: process.env.AXIOM_TOKEN,
+            },
+          }
+        : // Production without Axiom: JSON to stdout
+          undefined,
 
   // Base fields included in every log
   base: {
@@ -102,8 +106,8 @@ export function logFaviconFetch(data: {
   url: string;
   source?: string;
   format?: string;
-  requestSize?: number;
-  requestFormat?: string;
+  size?: number;
+  response?: string;
   success: boolean;
   duration: number;
   error?: string;
@@ -115,8 +119,8 @@ export function logFaviconFetch(data: {
       url: data.url,
       source: data.source,
       format: data.format,
-      requestSize: data.requestSize,
-      requestFormat: data.requestFormat,
+      response: data.response,
+      size: data.size,
       success: data.success,
       duration: data.duration,
       error: data.error,

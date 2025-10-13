@@ -93,7 +93,6 @@ export async function processImage(
   }
 }
 
-
 /**
  * Apply format conversion to Sharp pipeline
  */

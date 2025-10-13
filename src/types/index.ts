@@ -6,12 +6,13 @@ export interface FaviconSource {
   url: string;
   size?: number;
   format?: string;
-  source: 'link-tag' | 'manifest' | 'fallback' | 'og-image';
+  source: 'link-tag' | 'manifest' | 'fallback';
   score: number;
 }
 
 export interface FaviconResult {
-  url: string;
+  url: string; // API URL to fetch this exact processed image
+  sourceUrl: string; // Original favicon URL from the website
   width: number;
   height: number;
   format: string;

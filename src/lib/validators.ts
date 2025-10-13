@@ -64,7 +64,7 @@ const createUrlValidator = (blockPrivateIps: boolean) =>
 export const queryParamsSchema = (blockPrivateIps: boolean) =>
   z.object({
     url: createUrlValidator(blockPrivateIps),
-    format: z.enum(['image', 'json']).default('image'),
+    response: z.enum(['image', 'json']).default('image'),
     size: z
       .string()
       .optional()
@@ -77,7 +77,7 @@ export const queryParamsSchema = (blockPrivateIps: boolean) =>
           .max(512, 'Size must be between 16 and 512 pixels')
           .optional()
       ),
-    type: z.enum(['png', 'jpg', 'jpeg', 'ico', 'webp', 'svg']).optional(),
+    format: z.enum(['png', 'jpg', 'jpeg', 'ico', 'webp', 'svg']).optional(),
     default: z.url('Default image must be a valid URL').optional(),
   });
 
