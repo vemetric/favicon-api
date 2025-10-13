@@ -19,6 +19,7 @@ import {
 import { getContentTypeFromFormat } from './lib/format-detector';
 import { logRequest, logFaviconFetch, logger } from './lib/logger';
 import { getClientIp } from './lib/request-ip';
+import { getCachedFallback, fetchCustomDefault } from './lib/fallback-image';
 
 export function createApp(config: AppConfig) {
   const app = new Hono();
@@ -232,37 +233,23 @@ async function handleFallback(
   response: OutputFormat,
   defaultImage?: string
 ) {
-  const fallbackUrl = defaultImage || config.DEFAULT_IMAGE_URL;
-
   try {
     let buffer: Buffer;
     let imageFormat: string;
     let sourceUrl: string;
 
-    // Use local default.svg if no fallback URL is provided
-    if (!fallbackUrl) {
-      const defaultSvgPath = new URL('./default.svg', import.meta.url).pathname;
-      const file = Bun.file(defaultSvgPath);
-      const arrayBuffer = await file.arrayBuffer();
-      buffer = Buffer.from(arrayBuffer);
-      imageFormat = 'svg';
-      sourceUrl = 'default.svg';
+    // If a custom default image URL is provided, fetch it
+    if (defaultImage) {
+      const customDefault = await fetchCustomDefault(defaultImage, config);
+      buffer = customDefault.buffer;
+      imageFormat = customDefault.format;
+      sourceUrl = customDefault.sourceUrl;
     } else {
-      // Fetch default image from URL
-      const response = await fetch(fallbackUrl, {
-        headers: { 'User-Agent': config.USER_AGENT },
-        signal: AbortSignal.timeout(config.REQUEST_TIMEOUT),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch default image');
-      }
-
-      const arrayBuffer = await response.arrayBuffer();
-      buffer = Buffer.from(arrayBuffer);
-      // Detect format from URL or assume PNG
-      imageFormat = fallbackUrl.endsWith('.svg') ? 'svg' : 'png';
-      sourceUrl = fallbackUrl;
+      // Use the cached fallback image
+      const cachedFallback = getCachedFallback();
+      buffer = cachedFallback.buffer;
+      imageFormat = cachedFallback.format;
+      sourceUrl = cachedFallback.sourceUrl;
     }
 
     if (response === 'json') {

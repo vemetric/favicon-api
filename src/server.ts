@@ -7,12 +7,17 @@ import { createApp } from './index';
 import { loadConfig } from './lib/config';
 import { logger } from './lib/logger';
 import { initVemetric } from './lib/analytics';
+import { initializeFallbackImage } from './lib/fallback-image';
 
 // Load and validate configuration
 const config = loadConfig();
 
 // Initialize Vemetric analytics if token is configured
 initVemetric(config.VEMETRIC_TOKEN, config.VEMETRIC_HOST);
+
+// Pre-fetch fallback image at server boot
+logger.info('Fetching fallback image...');
+await initializeFallbackImage(config);
 
 // Create Hono app
 const app = createApp(config);

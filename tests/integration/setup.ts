@@ -5,6 +5,7 @@
 
 import { createApp } from '../../src/index';
 import { loadConfig } from '../../src/lib/config';
+import { initializeFallbackImage } from '../../src/lib/fallback-image';
 import type { Server } from 'bun';
 
 let testServer: Server<undefined> | null = null;
@@ -23,6 +24,9 @@ export async function startTestServer(): Promise<string> {
     // Disable private IP blocking for tests
     BLOCK_PRIVATE_IPS: false,
   };
+
+  // Initialize fallback image for tests
+  await initializeFallbackImage(config);
 
   const app = createApp(config);
 
