@@ -56,27 +56,39 @@ function createHashedIdentifier(ip: string): string {
  * For typical favicon API usage via <img> tags, Referer will be the primary identifier.
  * Origin takes priority when present because it's more explicit and reliable.
  */
-export function extractUserIdentifier(headers: {
+export function extractUserIdentifier(headers?: {
   origin?: string;
   referer?: string;
   ip?: string;
-}): string {
+}): { identifier: string; source: string } {
   // Priority 1: Origin header (sent by browsers for CORS requests)
-  if (headers.origin) {
-    return extractDomain(headers.origin);
+  if (headers?.origin) {
+    return {
+      identifier: extractDomain(headers.origin),
+      source: 'origin',
+    };
   }
 
   // Priority 2: Referer header (contains full URL of requesting page)
-  if (headers.referer) {
-    return extractDomain(headers.referer);
+  if (headers?.referer) {
+    return {
+      identifier: extractDomain(headers.referer),
+      source: 'referer',
+    };
   }
 
   // Priority 3: Hashed IP for API-to-API calls (privacy-friendly)
-  if (headers.ip) {
-    return createHashedIdentifier(headers.ip);
+  if (headers?.ip) {
+    return {
+      identifier: createHashedIdentifier(headers.ip),
+      source: 'ip',
+    };
   }
 
-  return 'unknown';
+  return {
+    identifier: 'unknown',
+    source: 'unknown',
+  };
 }
 
 /**
@@ -101,11 +113,11 @@ export async function trackFaviconFetch(data: {
   if (!vemetricClient) return;
 
   const eventName = data.success ? 'FaviconFetchSuccess' : 'FaviconFetchFailure';
-  const userIdentifier = data.headers ? extractUserIdentifier(data.headers) : 'unknown';
+  const identifierData = extractUserIdentifier(data.headers);
 
   await vemetricClient.trackEvent(eventName, {
-    userIdentifier,
-    userDisplayName: userIdentifier,
+    userIdentifier: identifierData.identifier,
+    userDisplayName: identifierData.identifier,
     eventData: {
       targetUrl: data.url, // URL of the favicon being fetched
       faviconUrl: data.faviconUrl, // Actual favicon URL used
@@ -115,6 +127,7 @@ export async function trackFaviconFetch(data: {
       response: data.response,
       duration: data.duration,
       error: data.error,
+      identifierSource: identifierData.source, // Source of the user identifier
     },
   });
 }
