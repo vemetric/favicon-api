@@ -54,6 +54,37 @@ export function createApp(config: AppConfig) {
     return c.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
+  // Root endpoint - redirect to documentation when no path param or query params
+  app.get('/', async (c) => {
+    const url = new URL(c.req.url);
+    // Check if there are no query parameters - redirect to docs
+    if (url.search === '' || url.searchParams.toString() === '') {
+      return c.redirect('https://vemetric.com/favicon-api', 302);
+    }
+
+    // If there are query params but no URL, return fallback image
+    try {
+      const schema = queryParamsSchema(config.BLOCK_PRIVATE_IPS);
+      const parseResult = schema.safeParse({
+        url: undefined, // No URL provided
+        response: c.req.query('response'),
+        size: c.req.query('size'),
+        format: c.req.query('format'),
+        default: c.req.query('default'),
+      });
+
+      // If validation fails, just use defaults
+      const response = (parseResult.success ? parseResult.data.response : 'image') as OutputFormat;
+      const defaultImage = parseResult.success ? parseResult.data.default : undefined;
+
+      return await handleFallback(c, config, response, defaultImage);
+    } catch (error) {
+      logger.error({ err: error }, 'Error processing root request with query params');
+      const headers = generateErrorHeaders(config);
+      return c.json({ error: 'Internal server error' }, 500, headers);
+    }
+  });
+
   // Main favicon endpoint - uses path parameter for URL
   app.get('/:url{.+}', async (c) => {
     try {
