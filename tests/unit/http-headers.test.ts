@@ -7,7 +7,6 @@ import {
   generateSuccessHeaders,
   generateDefaultHeaders,
   generateErrorHeaders,
-  getContentType,
 } from '../../src/lib/http-headers';
 import type { AppConfig } from '../../src/lib/config';
 
@@ -120,42 +119,6 @@ describe('HTTP Headers Utilities', () => {
       const headers = generateErrorHeaders(customConfig);
 
       expect(headers['Cache-Control']).toBe('no-cache, max-age=120');
-    });
-  });
-
-  describe('getContentType', () => {
-    test('should return correct content type for PNG', () => {
-      expect(getContentType('png')).toBe('image/png');
-      expect(getContentType('PNG')).toBe('image/png');
-    });
-
-    test('should return correct content type for JPEG', () => {
-      expect(getContentType('jpg')).toBe('image/jpeg');
-      expect(getContentType('jpeg')).toBe('image/jpeg');
-      expect(getContentType('JPG')).toBe('image/jpeg');
-    });
-
-    test('should return correct content type for ICO', () => {
-      expect(getContentType('ico')).toBe('image/x-icon');
-    });
-
-    test('should return correct content type for WebP', () => {
-      expect(getContentType('webp')).toBe('image/webp');
-    });
-
-    test('should return correct content type for SVG', () => {
-      expect(getContentType('svg')).toBe('image/svg+xml');
-    });
-
-    test('should handle case insensitivity', () => {
-      expect(getContentType('PNG')).toBe('image/png');
-      expect(getContentType('JpG')).toBe('image/jpeg');
-      expect(getContentType('WeBp')).toBe('image/webp');
-    });
-
-    test('should return PNG for unknown format', () => {
-      expect(getContentType('unknown')).toBe('image/png');
-      expect(getContentType('')).toBe('image/png');
     });
   });
 });

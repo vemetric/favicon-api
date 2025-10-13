@@ -43,19 +43,3 @@ function generateETag(content: Buffer): string {
   const hash = Bun.hash(content);
   return `"${hash.toString(16)}"`;
 }
-
-/**
- * Get content type from image format
- */
-export function getContentType(format: string): string {
-  const contentTypes: Record<string, string> = {
-    png: 'image/png',
-    jpg: 'image/jpeg',
-    jpeg: 'image/jpeg',
-    ico: 'image/x-icon',
-    webp: 'image/webp',
-    svg: 'image/svg+xml',
-  };
-
-  return contentTypes[format.toLowerCase()] || 'image/png';
-}

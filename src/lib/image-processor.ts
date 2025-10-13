@@ -5,6 +5,7 @@
 
 import sharp from 'sharp';
 import type { ImageProcessOptions, ProcessedImage } from '../types';
+import { detectFormatFromBuffer, isSvg } from './format-detector';
 
 /**
  * Process image: resize, convert format, optimize
@@ -28,6 +29,29 @@ export async function processImage(
       // If size or format conversion is requested, rasterize the SVG
     }
 
+    // Try to get original metadata first (helps with error recovery)
+    let originalMetadata: sharp.Metadata | null = null;
+    let detectedFormat = 'png';
+
+    try {
+      originalMetadata = await sharp(imageData).metadata();
+      detectedFormat = originalMetadata.format || 'png';
+    } catch {
+      // If we can't read metadata, try to detect format from buffer
+      detectedFormat = detectFormatFromBuffer(imageData);
+
+      // If it's an unsupported format and no processing is requested, return as-is
+      if (!options.size && !options.format) {
+        return {
+          data: imageData,
+          format: detectedFormat,
+          width: originalMetadata?.width || 0,
+          height: originalMetadata?.height || 0,
+          size: imageData.length,
+        };
+      }
+    }
+
     let pipeline = sharp(imageData);
 
     // Resize if size is specified
@@ -49,17 +73,19 @@ export async function processImage(
 
     return {
       data: outputBuffer,
-      format: outputMetadata.format || options.format || 'png',
+      format: outputMetadata.format || options.format || detectedFormat,
       width: outputMetadata.width || 0,
       height: outputMetadata.height || 0,
       size: outputBuffer.length,
     };
-  } catch (error) {
-    console.error('Error processing image:', error);
-    // Return original image on error
+  } catch {
+    // Try to detect format from buffer for better error recovery
+    const detectedFormat = detectFormatFromBuffer(imageData);
+
+    // Return original image on error with detected format
     return {
       data: imageData,
-      format: 'png',
+      format: detectedFormat,
       width: 0,
       height: 0,
       size: imageData.length,
@@ -67,13 +93,6 @@ export async function processImage(
   }
 }
 
-/**
- * Check if buffer contains SVG data
- */
-function isSvg(buffer: Buffer): boolean {
-  const header = buffer.toString('utf8', 0, 100).toLowerCase();
-  return header.includes('<svg') || header.includes('<?xml');
-}
 
 /**
  * Apply format conversion to Sharp pipeline

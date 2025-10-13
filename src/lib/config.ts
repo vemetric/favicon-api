@@ -37,6 +37,10 @@ const envSchema = z.object({
     .default('true')
     .transform((val) => val !== 'false'),
   MAX_REDIRECTS: z.string().default('5').transform(Number).pipe(z.number().int().min(0).max(20)),
+
+  // Logging (Axiom integration - optional)
+  AXIOM_DATASET: z.string().optional(),
+  AXIOM_TOKEN: z.string().optional(),
 });
 
 // Infer the TypeScript type from the schema
@@ -60,13 +64,16 @@ export function loadConfig(): AppConfig {
       ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS,
       BLOCK_PRIVATE_IPS: process.env.BLOCK_PRIVATE_IPS,
       MAX_REDIRECTS: process.env.MAX_REDIRECTS,
+      AXIOM_DATASET: process.env.AXIOM_DATASET,
+      AXIOM_TOKEN: process.env.AXIOM_TOKEN,
     });
 
-    console.info('Configuration loaded and validated successfully');
+    // Note: Don't use logger here as it may not be initialized yet
+    console.info('✓ Configuration loaded and validated successfully');
     return config;
   } catch (error) {
     if (error instanceof z.ZodError) {
-      console.error('Configuration validation failed:');
+      console.error('✗ Configuration validation failed:');
       error.issues.forEach((issue) => {
         console.error(`  - ${issue.path.join('.')}: ${issue.message}`);
       });

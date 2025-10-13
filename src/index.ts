@@ -15,8 +15,9 @@ import {
   generateSuccessHeaders,
   generateDefaultHeaders,
   generateErrorHeaders,
-  getContentType,
 } from './lib/http-headers';
+import { getContentTypeFromFormat } from './lib/format-detector';
+import { logRequest, logFaviconFetch } from './lib/logger';
 
 export function createApp(config: AppConfig) {
   const app = new Hono();
@@ -28,6 +29,24 @@ export function createApp(config: AppConfig) {
       origin: config.ALLOWED_ORIGINS === '*' ? '*' : config.ALLOWED_ORIGINS.split(','),
     })
   );
+
+  // Request logging middleware
+  app.use('*', async (c, next) => {
+    const start = Date.now();
+    await next();
+    const duration = Date.now() - start;
+
+    // Log request
+    logRequest({
+      method: c.req.method,
+      path: c.req.path,
+      query: Object.fromEntries(new URL(c.req.url).searchParams),
+      statusCode: c.res.status,
+      responseTime: duration,
+      userAgent: c.req.header('user-agent'),
+      ip: c.req.header('x-forwarded-for') || c.req.header('x-real-ip'),
+    });
+  });
 
   // Health check endpoint
   app.get('/health', (c) => {
@@ -58,9 +77,18 @@ export function createApp(config: AppConfig) {
       const { url, format, size, type, default: defaultImage } = parseResult.data;
 
       // Find favicons
+      const faviconStart = Date.now();
       const favicons = await findFavicons(url, config);
 
       if (favicons.length === 0) {
+        logFaviconFetch({
+          url,
+          requestFormat: format,
+          requestSize: size,
+          success: false,
+          duration: Date.now() - faviconStart,
+          error: 'No favicons found',
+        });
         return handleFallback(c, config, format, defaultImage);
       }
 
@@ -68,8 +96,27 @@ export function createApp(config: AppConfig) {
       const favicon = await fetchBestFavicon(favicons, config);
 
       if (!favicon || !favicon.data) {
+        logFaviconFetch({
+          url,
+          requestFormat: format,
+          requestSize: size,
+          success: false,
+          duration: Date.now() - faviconStart,
+          error: 'Failed to fetch favicon',
+        });
         return handleFallback(c, config, format, defaultImage);
       }
+
+      // Log successful favicon fetch
+      logFaviconFetch({
+        url,
+        requestFormat: format,
+        requestSize: size,
+        source: favicon.source,
+        format: favicon.format,
+        success: true,
+        duration: Date.now() - faviconStart,
+      });
 
       // Process image if needed
       const processed = await processImage(favicon.data, {
@@ -94,7 +141,7 @@ export function createApp(config: AppConfig) {
 
       // Return image
       const headers = generateSuccessHeaders(config, processed.data);
-      const contentType = getContentType(processed.format);
+      const contentType = getContentTypeFromFormat(processed.format);
 
       return c.body(new Uint8Array(processed.data), 200, {
         ...headers,

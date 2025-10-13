@@ -5,6 +5,7 @@
 
 import { createApp } from './index';
 import { loadConfig } from './lib/config';
+import { logger } from './lib/logger';
 
 // Load and validate configuration
 const config = loadConfig();
@@ -19,21 +20,24 @@ const server = Bun.serve({
   fetch: app.fetch,
 });
 
-console.info(`🚀 Favicon API server started`);
-console.info(`📡 Listening on http://${config.HOST}:${config.PORT}`);
-console.info(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
-console.info('');
-console.info('Press Ctrl+C to stop the server');
+logger.info(
+  {
+    port: config.PORT,
+    host: config.HOST,
+    environment: process.env.NODE_ENV || 'development',
+  },
+  `Server started on http://${config.HOST}:${config.PORT}`
+);
 
 // Graceful shutdown
 process.on('SIGINT', () => {
-  console.info('\n⏹️  Shutting down gracefully...');
+  logger.info('Received SIGINT, shutting down gracefully...');
   server.stop();
   process.exit(0);
 });
 
 process.on('SIGTERM', () => {
-  console.info('\n⏹️  Shutting down gracefully...');
+  logger.info('Received SIGTERM, shutting down gracefully...');
   server.stop();
   process.exit(0);
 });

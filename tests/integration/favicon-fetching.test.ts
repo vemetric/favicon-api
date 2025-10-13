@@ -42,7 +42,8 @@ describe('Favicon Fetching', () => {
 
       const data = await response.json();
       expect(data.url).toBeDefined();
-      expect(data.format).toBe('png');
+      // Google serves ICO format, which is correctly detected now
+      expect(['png', 'ico']).toContain(data.format);
     });
 
     test('should fetch Stack Overflow favicon as JSON', async () => {
@@ -71,14 +72,15 @@ describe('Favicon Fetching', () => {
       expect(arrayBuffer.byteLength).toBeGreaterThan(0);
     });
 
-    test('should have correct content-type for PNG', async () => {
+    test('should have correct content-type for favicon', async () => {
       const response = await fetchWithTimeout(
         `${baseUrl}/?url=google.com`,
         {},
         15000
       );
       const contentType = response.headers.get('content-type');
-      expect(contentType).toBe('image/png');
+      // Google serves ICO format, which is correctly detected now
+      expect(contentType).toMatch(/^image\/(png|x-icon)/);
     });
 
     test('should have correct content-type for SVG', async () => {
