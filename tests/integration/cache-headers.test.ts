@@ -91,7 +91,7 @@ describe('Cache Headers', () => {
       expect(maxAge).toBeGreaterThan(3600); // At least 1 hour
     });
 
-    test('should include s-maxage for CDN caching', async () => {
+    test('should include CDN-Cache-Control for CDN caching', async () => {
       const response = await fetchWithTimeout(
         `${baseUrl}/github.com`,
         {},
@@ -99,8 +99,10 @@ describe('Cache Headers', () => {
       );
       expect(response.status).toBe(200);
 
-      const cacheControl = response.headers.get('cache-control');
-      expect(cacheControl).toContain('s-maxage');
+      const cdnCacheControl = response.headers.get('cdn-cache-control');
+      expect(cdnCacheControl).toBeDefined();
+      expect(cdnCacheControl).toContain('public');
+      expect(cdnCacheControl).toMatch(/max-age=\d+/);
     });
   });
 
@@ -127,12 +129,13 @@ describe('Cache Headers', () => {
       expect(maxAge).toBeGreaterThan(0); // Should have some cache time
     });
 
-    test('should include s-maxage for error responses', async () => {
+    test('should include CDN-Cache-Control for error responses', async () => {
       const response = await fetchWithTimeout(`${baseUrl}/github.com?size=999`);
       expect(response.status).toBe(400);
 
-      const cacheControl = response.headers.get('cache-control');
-      expect(cacheControl).toContain('s-maxage');
+      const cdnCacheControl = response.headers.get('cdn-cache-control');
+      expect(cdnCacheControl).toBeDefined();
+      expect(cdnCacheControl).toMatch(/max-age=\d+/);
     });
   });
 

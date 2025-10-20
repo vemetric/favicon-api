@@ -38,7 +38,15 @@ describe('HTTP Headers Utilities', () => {
       expect(headers['Cache-Control']).toBeDefined();
       expect(headers['Cache-Control']).toContain('public');
       expect(headers['Cache-Control']).toContain('max-age=604800');
-      expect(headers['Cache-Control']).toContain('s-maxage=604800');
+      expect(headers['Cache-Control']).not.toContain('s-maxage');
+    });
+
+    test('should generate CDN-Cache-Control header', () => {
+      const buffer = Buffer.from('test content');
+      const headers = generateSuccessHeaders(mockConfig, buffer);
+
+      expect(headers['CDN-Cache-Control']).toBeDefined();
+      expect(headers['CDN-Cache-Control']).toBe('public, max-age=604800');
     });
 
     test('should generate ETag based on content', () => {
@@ -87,7 +95,13 @@ describe('HTTP Headers Utilities', () => {
     test('should use success cache control value', () => {
       const headers = generateDefaultHeaders(mockConfig);
 
-      expect(headers['Cache-Control']).toBe('public, max-age=604800, s-maxage=604800');
+      expect(headers['Cache-Control']).toBe('public, max-age=604800');
+    });
+
+    test('should include CDN-Cache-Control header', () => {
+      const headers = generateDefaultHeaders(mockConfig);
+
+      expect(headers['CDN-Cache-Control']).toBe('public, max-age=604800');
     });
 
     test('should include Vary header', () => {
@@ -100,7 +114,8 @@ describe('HTTP Headers Utilities', () => {
       const customConfig = { ...mockConfig, CACHE_CONTROL_SUCCESS: 7200 };
       const headers = generateDefaultHeaders(customConfig);
 
-      expect(headers['Cache-Control']).toBe('public, max-age=7200, s-maxage=7200');
+      expect(headers['Cache-Control']).toBe('public, max-age=7200');
+      expect(headers['CDN-Cache-Control']).toBe('public, max-age=7200');
     });
   });
 
@@ -108,20 +123,27 @@ describe('HTTP Headers Utilities', () => {
     test('should use error cache time', () => {
       const headers = generateErrorHeaders(mockConfig);
 
-      expect(headers['Cache-Control']).toBe('no-cache, max-age=604800, s-maxage=604800');
+      expect(headers['Cache-Control']).toBe('public, max-age=604800');
     });
 
-    test('should include no-cache directive', () => {
+    test('should include CDN-Cache-Control header', () => {
       const headers = generateErrorHeaders(mockConfig);
 
-      expect(headers['Cache-Control']).toContain('no-cache');
+      expect(headers['CDN-Cache-Control']).toBe('public, max-age=604800');
+    });
+
+    test('should include public directive', () => {
+      const headers = generateErrorHeaders(mockConfig);
+
+      expect(headers['Cache-Control']).toContain('public');
     });
 
     test('should respect custom error cache config', () => {
       const customConfig = { ...mockConfig, CACHE_CONTROL_ERROR: 120 };
       const headers = generateErrorHeaders(customConfig);
 
-      expect(headers['Cache-Control']).toBe('no-cache, max-age=120, s-maxage=120');
+      expect(headers['Cache-Control']).toBe('public, max-age=120');
+      expect(headers['CDN-Cache-Control']).toBe('public, max-age=120');
     });
   });
 });

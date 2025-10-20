@@ -10,7 +10,8 @@ import type { AppConfig } from './config';
  */
 export function generateSuccessHeaders(config: AppConfig, content: Buffer) {
   return {
-    'Cache-Control': `public, max-age=${config.CACHE_CONTROL_SUCCESS}, s-maxage=${config.CACHE_CONTROL_SUCCESS}`,
+    'Cache-Control': `public, max-age=${config.CACHE_CONTROL_SUCCESS}`,
+    'CDN-Cache-Control': `public, max-age=${config.CACHE_CONTROL_SUCCESS}`,
     ETag: generateETag(content),
     'Last-Modified': new Date().toUTCString(),
     Vary: 'Accept',
@@ -22,7 +23,8 @@ export function generateSuccessHeaders(config: AppConfig, content: Buffer) {
  */
 export function generateDefaultHeaders(config: AppConfig) {
   return {
-    'Cache-Control': `public, max-age=${config.CACHE_CONTROL_SUCCESS}, s-maxage=${config.CACHE_CONTROL_SUCCESS}`,
+    'Cache-Control': `public, max-age=${config.CACHE_CONTROL_SUCCESS}`,
+    'CDN-Cache-Control': `public, max-age=${config.CACHE_CONTROL_SUCCESS}`,
     Vary: 'Accept',
   };
 }
@@ -32,7 +34,8 @@ export function generateDefaultHeaders(config: AppConfig) {
  */
 export function generateErrorHeaders(config: AppConfig) {
   return {
-    'Cache-Control': `no-cache, max-age=${config.CACHE_CONTROL_ERROR}, s-maxage=${config.CACHE_CONTROL_ERROR}`,
+    'Cache-Control': `public, max-age=${config.CACHE_CONTROL_ERROR}`,
+    'CDN-Cache-Control': `public, max-age=${config.CACHE_CONTROL_ERROR}`,
   };
 }
 
