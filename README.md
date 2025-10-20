@@ -51,9 +51,8 @@ docker run -d \
   --restart unless-stopped \
   -e PORT=3000 \
   -e DEFAULT_IMAGE_URL=https://example.com/default-favicon.png \
-  -e CACHE_CONTROL_SUCCESS=86400 \
-  -e CACHE_CONTROL_DEFAULT=3600 \
-  -e CACHE_CONTROL_ERROR=60 \
+  -e CACHE_CONTROL_SUCCESS=604800 \
+  -e CACHE_CONTROL_ERROR=604800 \
   -e REQUEST_TIMEOUT=5000 \
   -e MAX_IMAGE_SIZE=5242880 \
   -e ALLOWED_ORIGINS=* \
@@ -118,7 +117,7 @@ curl "http://localhost:3000/example.com&default=https://mysite.com/fallback.png"
 
 ```
 Content-Type: image/png
-Cache-Control: public, max-age=86400, s-maxage=2592000
+Cache-Control: public, max-age=604800, s-maxage=604800
 ETag: "abc123"
 [Binary image data]
 ```
@@ -148,10 +147,10 @@ HOST=0.0.0.0
 # Default fallback image (optional)
 DEFAULT_IMAGE_URL=https://example.com/default-favicon.png
 
-# Cache control headers (seconds)
-CACHE_CONTROL_SUCCESS=86400
-CACHE_CONTROL_DEFAULT=3600
-CACHE_CONTROL_ERROR=60
+# Cache control headers (seconds) - applies to both browser and CDN
+# 604800 seconds = 7 days
+CACHE_CONTROL_SUCCESS=604800
+CACHE_CONTROL_ERROR=604800
 
 # Request handling
 REQUEST_TIMEOUT=5000

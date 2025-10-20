@@ -113,7 +113,7 @@ describe('Cache Headers', () => {
       expect(cacheControl).toBeDefined();
     });
 
-    test('should have short cache time for errors', async () => {
+    test('should have cache time for errors', async () => {
       const response = await fetchWithTimeout(`${baseUrl}/github.com?size=999`);
       expect(response.status).toBe(400);
 
@@ -124,7 +124,15 @@ describe('Cache Headers', () => {
       const match = cacheControl!.match(/max-age=(\d+)/);
       expect(match).toBeDefined();
       const maxAge = parseInt(match![1], 10);
-      expect(maxAge).toBeLessThanOrEqual(300); // At most 5 minutes
+      expect(maxAge).toBeGreaterThan(0); // Should have some cache time
+    });
+
+    test('should include s-maxage for error responses', async () => {
+      const response = await fetchWithTimeout(`${baseUrl}/github.com?size=999`);
+      expect(response.status).toBe(400);
+
+      const cacheControl = response.headers.get('cache-control');
+      expect(cacheControl).toContain('s-maxage');
     });
   });
 

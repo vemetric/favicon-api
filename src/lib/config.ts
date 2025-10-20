@@ -14,14 +14,13 @@ const envSchema = z.object({
   // Fallback image
   DEFAULT_IMAGE_URL: z.string().url().optional(),
 
-  // Cache control headers (in seconds)
+  // Cache control headers (in seconds) - applies to both browser (max-age) and CDN (s-maxage)
   CACHE_CONTROL_SUCCESS: z
     .string()
-    .default('86400')
+    .default('604800')
     .transform(Number)
     .pipe(z.number().int().min(0)),
-  CACHE_CONTROL_DEFAULT: z.string().default('3600').transform(Number).pipe(z.number().int().min(0)),
-  CACHE_CONTROL_ERROR: z.string().default('60').transform(Number).pipe(z.number().int().min(0)),
+  CACHE_CONTROL_ERROR: z.string().default('604800').transform(Number).pipe(z.number().int().min(0)),
 
   // Request handling
   REQUEST_TIMEOUT: z.string().default('5000').transform(Number).pipe(z.number().int().min(1000)),
@@ -60,7 +59,6 @@ export function loadConfig(): AppConfig {
       HOST: process.env.HOST,
       DEFAULT_IMAGE_URL: process.env.DEFAULT_IMAGE_URL,
       CACHE_CONTROL_SUCCESS: process.env.CACHE_CONTROL_SUCCESS,
-      CACHE_CONTROL_DEFAULT: process.env.CACHE_CONTROL_DEFAULT,
       CACHE_CONTROL_ERROR: process.env.CACHE_CONTROL_ERROR,
       REQUEST_TIMEOUT: process.env.REQUEST_TIMEOUT,
       MAX_IMAGE_SIZE: process.env.MAX_IMAGE_SIZE,
