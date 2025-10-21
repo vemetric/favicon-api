@@ -14,7 +14,7 @@ const envSchema = z.object({
   // Fallback image
   DEFAULT_IMAGE_URL: z.string().url().optional(),
 
-  // Cache control headers (in seconds) - applies to both browser (max-age) and CDN (s-maxage)
+  // Cache control headers (in seconds) - applies to both browser and CDN
   CACHE_CONTROL_SUCCESS: z
     .string()
     .default('604800')

@@ -117,7 +117,8 @@ curl "http://localhost:3000/example.com&default=https://mysite.com/fallback.png"
 
 ```
 Content-Type: image/png
-Cache-Control: public, max-age=604800, s-maxage=604800
+Cache-Control: public, max-age=604800
+CDN-Cache-Control: public, max-age=604800
 ETag: "abc123"
 [Binary image data]
 ```

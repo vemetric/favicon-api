@@ -38,7 +38,10 @@ describe('HTTP Headers Utilities', () => {
       expect(headers['Cache-Control']).toBeDefined();
       expect(headers['Cache-Control']).toContain('public');
       expect(headers['Cache-Control']).toContain('max-age=604800');
-      expect(headers['Cache-Control']).not.toContain('s-maxage');
+
+      expect(headers['CDN-Cache-Control']).toBeDefined();
+      expect(headers['CDN-Cache-Control']).toContain('public');
+      expect(headers['CDN-Cache-Control']).toContain('max-age=604800');
     });
 
     test('should generate CDN-Cache-Control header', () => {
