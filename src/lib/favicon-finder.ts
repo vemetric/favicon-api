@@ -88,7 +88,7 @@ function extractFromLinkTags($: cheerio.CheerioAPI, baseUrl: string): FaviconSou
     if (!href) return;
 
     const sizes = $(element).attr('sizes');
-    const type = $(element).attr('type');
+    const type = $(element).attr('type') || href.split('.').pop() || '';
     const rel = $(element).attr('rel') || '';
 
     const size = parseSizes(sizes);
