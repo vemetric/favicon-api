@@ -46,9 +46,12 @@ export async function processImage(
     let detectedFormat = 'png';
 
     // Detect if this is an ICO file
-    const isIco = imageData.length >= 4 &&
-      imageData[0] === 0x00 && imageData[1] === 0x00 &&
-      imageData[2] === 0x01 && imageData[3] === 0x00;
+    const isIco =
+      imageData.length >= 4 &&
+      imageData[0] === 0x00 &&
+      imageData[1] === 0x00 &&
+      imageData[2] === 0x01 &&
+      imageData[3] === 0x00;
 
     if (isIco) {
       try {
