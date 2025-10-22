@@ -4,6 +4,7 @@
  */
 
 import sharp from 'sharp';
+import { sharpsFromIco } from 'sharp-ico';
 import type { ImageProcessOptions, ProcessedImage } from '../types';
 import { detectFormatFromBuffer, isSvg } from './format-detector';
 
@@ -15,44 +16,82 @@ export async function processImage(
   options: ImageProcessOptions
 ): Promise<ProcessedImage> {
   try {
-    // Handle SVG pass-through (unless size is specified)
+    // Handle SVG pass-through
+    // SVGs are vector graphics and scale perfectly, so keep them as SVG
+    // unless the user explicitly requests a raster format (png, jpg, etc.)
     if (isSvg(imageData)) {
-      if (!options.size && (!options.format || options.format === 'svg')) {
+      if (!options.format || options.format === 'svg') {
+        // Pass through SVG without rasterization
+        const dimensions = extractSvgDimensions(imageData);
+
+        // If size is specified, report that size (SVGs scale perfectly)
+        // Otherwise, report the original SVG dimensions
+        const width = options.size || dimensions.width;
+        const height = options.size || dimensions.height;
+
         return {
           data: imageData,
           format: 'svg',
-          width: 0,
-          height: 0,
+          width,
+          height,
           size: imageData.length,
         };
       }
-      // If size or format conversion is requested, rasterize the SVG
+      // If format conversion to raster is requested, rasterize the SVG
     }
 
-    // Try to get original metadata first (helps with error recovery)
+    // Handle ICO files specially since Sharp doesn't support them natively
+    let workingBuffer = imageData;
     let originalMetadata: sharp.Metadata | null = null;
     let detectedFormat = 'png';
 
-    try {
-      originalMetadata = await sharp(imageData).metadata();
-      detectedFormat = originalMetadata.format || 'png';
-    } catch {
-      // If we can't read metadata, try to detect format from buffer
-      detectedFormat = detectFormatFromBuffer(imageData);
+    // Detect if this is an ICO file
+    const isIco = imageData.length >= 4 &&
+      imageData[0] === 0x00 && imageData[1] === 0x00 &&
+      imageData[2] === 0x01 && imageData[3] === 0x00;
 
-      // If it's an unsupported format and no processing is requested, return as-is
-      if (!options.size && !options.format) {
-        return {
-          data: imageData,
-          format: detectedFormat,
-          width: originalMetadata?.width || 0,
-          height: originalMetadata?.height || 0,
-          size: imageData.length,
-        };
+    if (isIco) {
+      try {
+        // Convert ICO to Sharp instance(s), get the largest one
+        const sharpInstances = await sharpsFromIco(imageData);
+        if (sharpInstances.length > 0) {
+          // sharp-ico returns instances sorted by size (largest first)
+          const largestSharp = sharpInstances[0] as sharp.Sharp;
+          originalMetadata = await largestSharp.metadata();
+          detectedFormat = 'ico';
+
+          // Convert the Sharp instance to a buffer for further processing
+          workingBuffer = await largestSharp.png().toBuffer();
+        }
+      } catch {
+        // If ICO parsing fails, fall back to original behavior
+        detectedFormat = 'ico';
       }
     }
 
-    let pipeline = sharp(imageData);
+    // Try to get original metadata first (helps with error recovery)
+    if (!originalMetadata) {
+      try {
+        originalMetadata = await sharp(workingBuffer).metadata();
+        detectedFormat = originalMetadata.format || 'png';
+      } catch {
+        // If we can't read metadata, try to detect format from buffer
+        detectedFormat = detectFormatFromBuffer(imageData);
+
+        // If it's an unsupported format and no processing is requested, return as-is
+        if (!options.size && !options.format) {
+          return {
+            data: imageData,
+            format: detectedFormat,
+            width: originalMetadata?.width || 0,
+            height: originalMetadata?.height || 0,
+            size: imageData.length,
+          };
+        }
+      }
+    }
+
+    let pipeline = sharp(workingBuffer);
 
     // Resize if size is specified
     if (options.size) {
@@ -139,5 +178,48 @@ export async function validateImage(buffer: Buffer): Promise<boolean> {
     return true;
   } catch {
     return false;
+  }
+}
+
+/**
+ * Extract dimensions from SVG buffer
+ * Looks for width/height attributes or viewBox on the SVG element
+ */
+function extractSvgDimensions(buffer: Buffer): { width: number; height: number } {
+  try {
+    const svgContent = buffer.toString('utf-8');
+
+    // Extract the opening <svg> tag (everything until the first >)
+    const svgTagMatch = svgContent.match(/<svg[^>]*>/i);
+    if (!svgTagMatch) {
+      return { width: 0, height: 0 };
+    }
+
+    const svgTag = svgTagMatch[0];
+
+    // Try to extract width and height attributes from the SVG tag
+    const widthMatch = svgTag.match(/\swidth=["']?(\d+(?:\.\d+)?)/i);
+    const heightMatch = svgTag.match(/\sheight=["']?(\d+(?:\.\d+)?)/i);
+
+    if (widthMatch?.[1] && heightMatch?.[1]) {
+      return {
+        width: Math.round(Number.parseFloat(widthMatch[1])),
+        height: Math.round(Number.parseFloat(heightMatch[1])),
+      };
+    }
+
+    // Try to extract from viewBox (format: "minX minY width height")
+    const viewBoxMatch = svgTag.match(/\sviewBox=["']?[\d.]+\s+[\d.]+\s+([\d.]+)\s+([\d.]+)/i);
+    if (viewBoxMatch?.[1] && viewBoxMatch?.[2]) {
+      return {
+        width: Math.round(Number.parseFloat(viewBoxMatch[1])),
+        height: Math.round(Number.parseFloat(viewBoxMatch[2])),
+      };
+    }
+
+    // If no dimensions found, return 0 (unknown)
+    return { width: 0, height: 0 };
+  } catch {
+    return { width: 0, height: 0 };
   }
 }

@@ -18,11 +18,7 @@ describe('Favicon Fetching', () => {
 
   describe('JSON Response Format', () => {
     test('should fetch GitHub favicon as JSON', async () => {
-      const response = await fetchWithTimeout(
-        `${baseUrl}/github.com?response=json`,
-        {},
-        15000
-      );
+      const response = await fetchWithTimeout(`${baseUrl}/github.com?response=json`, {}, 15000);
       expect(response.status).toBe(200);
 
       const data = await response.json();
@@ -33,11 +29,7 @@ describe('Favicon Fetching', () => {
     });
 
     test('should fetch Google favicon as JSON', async () => {
-      const response = await fetchWithTimeout(
-        `${baseUrl}/google.com?response=json`,
-        {},
-        15000
-      );
+      const response = await fetchWithTimeout(`${baseUrl}/google.com?response=json`, {}, 15000);
       expect(response.status).toBe(200);
 
       const data = await response.json();
@@ -73,22 +65,14 @@ describe('Favicon Fetching', () => {
     });
 
     test('should have correct content-type for favicon', async () => {
-      const response = await fetchWithTimeout(
-        `${baseUrl}/google.com`,
-        {},
-        15000
-      );
+      const response = await fetchWithTimeout(`${baseUrl}/google.com`, {}, 15000);
       const contentType = response.headers.get('content-type');
       // Google serves ICO format, which is correctly detected now
       expect(contentType).toMatch(/^image\/(png|x-icon)/);
     });
 
     test('should have correct content-type for SVG', async () => {
-      const response = await fetchWithTimeout(
-        `${baseUrl}/github.com`,
-        {},
-        15000
-      );
+      const response = await fetchWithTimeout(`${baseUrl}/github.com`, {}, 15000);
       const contentType = response.headers.get('content-type');
       expect(contentType).toMatch(/^image\/(svg\+xml|png)/);
     });
@@ -128,13 +112,154 @@ describe('Favicon Fetching', () => {
     });
   });
 
-  describe('URL Format Handling', () => {
-    test('should handle URL without protocol', async () => {
+  describe('SVG Handling', () => {
+    test('should return SVG with original dimensions when no size specified', async () => {
+      const response = await fetchWithTimeout(`${baseUrl}/github.com?response=json`, {}, 15000);
+      expect(response.status).toBe(200);
+
+      const data = await response.json();
+      // GitHub has SVG favicon
+      if (data.format === 'svg') {
+        expect(data.width).toBeGreaterThan(0);
+        expect(data.height).toBeGreaterThan(0);
+        // Should not be 0 (the old broken behavior)
+        expect(data.width).not.toBe(0);
+        expect(data.height).not.toBe(0);
+      }
+    });
+
+    test('should keep SVG format when size is specified without format conversion', async () => {
       const response = await fetchWithTimeout(
-        `${baseUrl}/github.com?response=json`,
+        `${baseUrl}/github.com?size=256&response=json`,
         {},
         15000
       );
+      expect(response.status).toBe(200);
+
+      const data = await response.json();
+      // Should keep as SVG (smart pass-through)
+      if (data.sourceUrl.endsWith('.svg')) {
+        expect(data.format).toBe('svg');
+        expect(data.width).toBe(256);
+        expect(data.height).toBe(256);
+      }
+    });
+
+    test('should rasterize SVG to PNG when format=png is specified', async () => {
+      const response = await fetchWithTimeout(
+        `${baseUrl}/github.com?size=256&format=png&response=json`,
+        {},
+        15000
+      );
+      expect(response.status).toBe(200);
+
+      const data = await response.json();
+      expect(data.format).toBe('png');
+      expect(data.width).toBe(256);
+      expect(data.height).toBe(256);
+    });
+
+    test('should return correct content-type for SVG pass-through', async () => {
+      const response = await fetchWithTimeout(`${baseUrl}/github.com?size=128`, {}, 15000);
+
+      const contentType = response.headers.get('content-type');
+      // Should be SVG or PNG (depending on what GitHub serves)
+      expect(contentType).toMatch(/^image\/(svg\+xml|png)/);
+    });
+  });
+
+  describe('ICO Handling', () => {
+    test('should extract dimensions from ICO files', async () => {
+      const response = await fetchWithTimeout(`${baseUrl}/google.com?response=json`, {}, 15000);
+      expect(response.status).toBe(200);
+
+      const data = await response.json();
+      // Google serves ICO - should have proper dimensions now
+      expect(data.width).toBeGreaterThan(0);
+      expect(data.height).toBeGreaterThan(0);
+      // Should not be 0 (the old broken behavior)
+      expect(data.width).not.toBe(0);
+      expect(data.height).not.toBe(0);
+    });
+
+    test('should resize ICO files when size parameter is provided', async () => {
+      const response = await fetchWithTimeout(
+        `${baseUrl}/google.com?size=128&response=json`,
+        {},
+        15000
+      );
+      expect(response.status).toBe(200);
+
+      const data = await response.json();
+      expect(data.width).toBe(128);
+      expect(data.height).toBe(128);
+    });
+
+    test('should convert ICO to PNG when processing', async () => {
+      const response = await fetchWithTimeout(
+        `${baseUrl}/google.com?size=64&response=json`,
+        {},
+        15000
+      );
+      expect(response.status).toBe(200);
+
+      const data = await response.json();
+      // ICO should be converted to PNG when processed
+      expect(data.format).toBe('png');
+    });
+  });
+
+  describe('Fallback Image Handling', () => {
+    test('should return fallback with original dimensions', async () => {
+      const response = await fetchWithTimeout(
+        `${baseUrl}/nonexistent-domain-xyz-12345.com?response=json`,
+        {},
+        15000
+      );
+      expect(response.status).toBe(200);
+
+      const data = await response.json();
+      expect(data.source).toBe('default');
+      expect(data.format).toBe('svg');
+      // Fallback SVG should have dimensions
+      expect(data.width).toBeGreaterThan(0);
+      expect(data.height).toBeGreaterThan(0);
+    });
+
+    test('should apply size parameter to fallback image', async () => {
+      const response = await fetchWithTimeout(
+        `${baseUrl}/nonexistent-domain-xyz-12345.com?size=128&response=json`,
+        {},
+        15000
+      );
+      expect(response.status).toBe(200);
+
+      const data = await response.json();
+      expect(data.source).toBe('default');
+      expect(data.format).toBe('svg');
+      expect(data.width).toBe(128);
+      expect(data.height).toBe(128);
+    });
+
+    test('should rasterize fallback when format=png is specified', async () => {
+      const response = await fetchWithTimeout(
+        `${baseUrl}/nonexistent-domain-xyz-12345.com?size=256&format=png&response=json`,
+        {},
+        15000
+      );
+      expect(response.status).toBe(200);
+
+      const data = await response.json();
+      expect(data.source).toBe('default');
+      expect(data.format).toBe('png');
+      expect(data.width).toBe(256);
+      expect(data.height).toBe(256);
+    });
+  });
+
+  describe('URL Format Handling', () => {
+    test('should handle URL without protocol', async () => {
+      const response = await fetchWithTimeout(`${baseUrl}/github.com?response=json`, {}, 15000);
       expect(response.status).toBe(200);
     });
 
@@ -161,11 +286,7 @@ describe('Favicon Fetching', () => {
   describe('Redirect Handling', () => {
     test('should follow redirects and fetch favicon from final destination', async () => {
       // vemetrics.com redirects to vemetric.com
-      const response = await fetchWithTimeout(
-        `${baseUrl}/vemetrics.com?response=json`,
-        {},
-        15000
-      );
+      const response = await fetchWithTimeout(`${baseUrl}/vemetrics.com?response=json`, {}, 15000);
       expect(response.status).toBe(200);
 
       const data = await response.json();

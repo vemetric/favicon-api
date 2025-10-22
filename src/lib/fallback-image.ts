@@ -5,11 +5,14 @@
 
 import type { AppConfig } from './config';
 import { logger } from './logger';
+import { processImage } from './image-processor';
 
 interface CachedFallback {
   buffer: Buffer;
   format: string;
   sourceUrl: string;
+  width: number;
+  height: number;
 }
 
 // Singleton instance
@@ -24,10 +27,15 @@ async function loadLocalDefaultSvg(): Promise<CachedFallback> {
   const arrayBuffer = await file.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
 
+  // Extract dimensions using processImage
+  const processed = await processImage(buffer, {});
+
   return {
     buffer,
     format: 'svg',
     sourceUrl: 'default.svg',
+    width: processed.width,
+    height: processed.height,
   };
 }
 
@@ -48,6 +56,8 @@ export async function initializeFallbackImage(config: AppConfig): Promise<void> 
           sourceUrl: cachedFallback.sourceUrl,
           format: cachedFallback.format,
           size: cachedFallback.buffer.length,
+          width: cachedFallback.width,
+          height: cachedFallback.height,
         },
         'Fallback image cached successfully'
       );
@@ -69,14 +79,25 @@ export async function initializeFallbackImage(config: AppConfig): Promise<void> 
     // Detect format from URL or assume PNG
     const format = fallbackUrl.endsWith('.svg') ? 'svg' : 'png';
 
+    // Extract dimensions using processImage
+    const processed = await processImage(buffer, {});
+
     cachedFallback = {
       buffer,
       format,
       sourceUrl: fallbackUrl,
+      width: processed.width,
+      height: processed.height,
     };
 
     logger.info(
-      { sourceUrl: cachedFallback.sourceUrl, format: cachedFallback.format, size: buffer.length },
+      {
+        sourceUrl: cachedFallback.sourceUrl,
+        format: cachedFallback.format,
+        size: buffer.length,
+        width: cachedFallback.width,
+        height: cachedFallback.height,
+      },
       'Fallback image cached successfully'
     );
   } catch (error) {
@@ -93,6 +114,8 @@ export async function initializeFallbackImage(config: AppConfig): Promise<void> 
         sourceUrl: cachedFallback.sourceUrl,
         format: cachedFallback.format,
         size: cachedFallback.buffer.length,
+        width: cachedFallback.width,
+        height: cachedFallback.height,
       },
       'Fallback image cached successfully (local default)'
     );
@@ -116,7 +139,7 @@ export function getCachedFallback(): CachedFallback {
 export async function fetchCustomDefault(
   url: string,
   config: AppConfig
-): Promise<{ buffer: Buffer; format: string; sourceUrl: string }> {
+): Promise<{ buffer: Buffer; format: string; sourceUrl: string; width: number; height: number }> {
   const response = await fetch(url, {
     headers: { 'User-Agent': config.USER_AGENT },
     signal: AbortSignal.timeout(config.REQUEST_TIMEOUT),
@@ -131,9 +154,14 @@ export async function fetchCustomDefault(
   // Detect format from URL or assume PNG
   const format = url.endsWith('.svg') ? 'svg' : 'png';
 
+  // Extract dimensions using processImage
+  const processed = await processImage(buffer, {});
+
   return {
     buffer,
     format,
     sourceUrl: url,
+    width: processed.width,
+    height: processed.height,
   };
 }

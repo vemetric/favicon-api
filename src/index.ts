@@ -77,8 +77,10 @@ export function createApp(config: AppConfig) {
       // If validation fails, just use defaults
       const response = (parseResult.success ? parseResult.data.response : 'image') as OutputFormat;
       const defaultImage = parseResult.success ? parseResult.data.default : undefined;
+      const size = parseResult.success ? parseResult.data.size : undefined;
+      const format = parseResult.success ? parseResult.data.format : undefined;
 
-      return await handleFallback(c, config, response, defaultImage);
+      return await handleFallback(c, config, response, defaultImage, size, format);
     } catch (error) {
       logger.error({ err: error }, 'Error processing root request with query params');
       const headers = generateErrorHeaders(config);
@@ -156,7 +158,7 @@ export function createApp(config: AppConfig) {
           error: 'Failed to fetch favicon',
           headers: requestHeaders,
         });
-        return handleFallback(c, config, response, defaultImage);
+        return handleFallback(c, config, response, defaultImage, size, format);
       }
 
       // Log successful favicon fetch
@@ -231,12 +233,16 @@ async function handleFallback(
   c: Context,
   config: AppConfig,
   response: OutputFormat,
-  defaultImage?: string
+  defaultImage?: string,
+  size?: number,
+  format?: 'png' | 'jpg' | 'jpeg' | 'ico' | 'webp' | 'svg'
 ) {
   try {
     let buffer: Buffer;
     let imageFormat: string;
     let sourceUrl: string;
+    let width: number;
+    let height: number;
 
     // If a custom default image URL is provided, fetch it
     if (defaultImage) {
@@ -244,12 +250,25 @@ async function handleFallback(
       buffer = customDefault.buffer;
       imageFormat = customDefault.format;
       sourceUrl = customDefault.sourceUrl;
+      width = customDefault.width;
+      height = customDefault.height;
     } else {
       // Use the cached fallback image
       const cachedFallback = getCachedFallback();
       buffer = cachedFallback.buffer;
       imageFormat = cachedFallback.format;
       sourceUrl = cachedFallback.sourceUrl;
+      width = cachedFallback.width;
+      height = cachedFallback.height;
+    }
+
+    // Process image if size or format is specified
+    if (size || format) {
+      const processed = await processImage(buffer, { size, format });
+      buffer = processed.data;
+      imageFormat = processed.format;
+      width = processed.width;
+      height = processed.height;
     }
 
     if (response === 'json') {
@@ -265,8 +284,8 @@ async function handleFallback(
       const result: FaviconResult = {
         url: apiUrl.toString(),
         sourceUrl,
-        width: 0,
-        height: 0,
+        width,
+        height,
         format: imageFormat,
         size: buffer.length,
         source: 'default',
