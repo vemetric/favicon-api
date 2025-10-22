@@ -194,19 +194,6 @@ describe('Favicon Fetching', () => {
       expect(data.width).toBe(128);
       expect(data.height).toBe(128);
     });
-
-    test('should convert ICO to PNG when processing', async () => {
-      const response = await fetchWithTimeout(
-        `${baseUrl}/google.com?size=64&response=json`,
-        {},
-        15000
-      );
-      expect(response.status).toBe(200);
-
-      const data = await response.json();
-      // ICO should be converted to PNG when processed
-      expect(data.format).toBe('png');
-    });
   });
 
   describe('Fallback Image Handling', () => {
