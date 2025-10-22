@@ -200,7 +200,7 @@ export function createApp(config: AppConfig) {
           width: processed.width,
           height: processed.height,
           format: processed.format,
-          size: processed.size,
+          bytes: processed.bytes,
           source: favicon.source,
         };
 
@@ -287,7 +287,7 @@ async function handleFallback(
         width,
         height,
         format: imageFormat,
-        size: buffer.length,
+        bytes: buffer.length,
         source: 'default',
       };
 

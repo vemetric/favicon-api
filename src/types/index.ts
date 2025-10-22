@@ -16,7 +16,7 @@ export interface FaviconResult {
   width: number;
   height: number;
   format: string;
-  size: number;
+  bytes: number; // File size in bytes
   source: string;
 }
 
@@ -31,7 +31,7 @@ export interface ProcessedImage {
   format: string;
   width: number;
   height: number;
-  size: number;
+  bytes: number; // File size in bytes
 }
 
 export type OutputFormat = 'image' | 'json';

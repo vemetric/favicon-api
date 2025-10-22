@@ -25,7 +25,7 @@ describe('Favicon Fetching', () => {
       expect(data.url).toBeDefined();
       expect(data.format).toBeDefined();
       expect(data.source).toBeDefined();
-      expect(data.size).toBeGreaterThan(0);
+      expect(data.bytes).toBeGreaterThan(0);
     });
 
     test('should fetch Google favicon as JSON', async () => {

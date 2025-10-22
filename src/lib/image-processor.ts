@@ -34,7 +34,7 @@ export async function processImage(
           format: 'svg',
           width,
           height,
-          size: imageData.length,
+          bytes: imageData.length,
         };
       }
       // If format conversion to raster is requested, rasterize the SVG
@@ -85,7 +85,7 @@ export async function processImage(
             format: detectedFormat,
             width: originalMetadata?.width || 0,
             height: originalMetadata?.height || 0,
-            size: imageData.length,
+            bytes: imageData.length,
           };
         }
       }
@@ -115,7 +115,7 @@ export async function processImage(
       format: outputMetadata.format || options.format || detectedFormat,
       width: outputMetadata.width || 0,
       height: outputMetadata.height || 0,
-      size: outputBuffer.length,
+      bytes: outputBuffer.length,
     };
   } catch {
     // Try to detect format from buffer for better error recovery
@@ -127,7 +127,7 @@ export async function processImage(
       format: detectedFormat,
       width: 0,
       height: 0,
-      size: imageData.length,
+      bytes: imageData.length,
     };
   }
 }

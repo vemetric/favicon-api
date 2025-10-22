@@ -55,7 +55,7 @@ export async function initializeFallbackImage(config: AppConfig): Promise<void> 
         {
           sourceUrl: cachedFallback.sourceUrl,
           format: cachedFallback.format,
-          size: cachedFallback.buffer.length,
+          bytes: cachedFallback.buffer.length,
           width: cachedFallback.width,
           height: cachedFallback.height,
         },
@@ -94,7 +94,7 @@ export async function initializeFallbackImage(config: AppConfig): Promise<void> 
       {
         sourceUrl: cachedFallback.sourceUrl,
         format: cachedFallback.format,
-        size: buffer.length,
+        bytes: buffer.length,
         width: cachedFallback.width,
         height: cachedFallback.height,
       },
