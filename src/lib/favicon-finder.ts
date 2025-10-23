@@ -20,20 +20,40 @@ const BROWSER_USER_AGENT =
 export async function findFavicons(url: string, config: AppConfig): Promise<FaviconSource[]> {
   const favicons: FaviconSource[] = [];
 
-  try {
-    // Ensure URL has protocol
-    const targetUrl = url.startsWith('http') ? url : `https://${url}`;
+  // Ensure URL has protocol
+  const targetUrl = url.startsWith('http') ? url : `https://${url}`;
+  const parsedUrl = new URL(targetUrl);
+  const baseUrl = `${parsedUrl.protocol}//${parsedUrl.hostname}`;
 
+  try {
     // Fetch HTML content and get final URL after redirects
     const { html, finalUrl } = await fetchHtml(targetUrl, config);
-    const parsedUrl = new URL(finalUrl);
-    const baseUrl = `${parsedUrl.protocol}//${parsedUrl.hostname}`;
+    const finalParsedUrl = new URL(finalUrl);
+    const finalBaseUrl = `${finalParsedUrl.protocol}//${finalParsedUrl.hostname}`;
     const $ = cheerio.load(html);
 
     // Extract favicons from HTML (only link tags, no OG images)
-    favicons.push(...extractFromLinkTags($, baseUrl));
+    favicons.push(...extractFromLinkTags($, finalBaseUrl));
 
     // Add common fallback locations
+    favicons.push({
+      url: `${finalBaseUrl}/favicon.ico`,
+      source: 'fallback',
+      score: 10,
+    });
+
+    favicons.push({
+      url: `${finalBaseUrl}/apple-touch-icon.png`,
+      source: 'fallback',
+      score: 20,
+    });
+
+    // Try to fetch and parse manifest.json
+    const manifestFavicons = await extractFromManifest(finalBaseUrl, config);
+    favicons.push(...manifestFavicons);
+  } catch {
+    // HTML parsing failed (403, timeout, etc.) - still try fallback locations
+    // This is expected for some websites with strict bot protection
     favicons.push({
       url: `${baseUrl}/favicon.ico`,
       source: 'fallback',
@@ -45,13 +65,6 @@ export async function findFavicons(url: string, config: AppConfig): Promise<Favi
       source: 'fallback',
       score: 20,
     });
-
-    // Try to fetch and parse manifest.json
-    const manifestFavicons = await extractFromManifest(baseUrl, config);
-    favicons.push(...manifestFavicons);
-  } catch {
-    // Error finding favicons - return whatever we found so far
-    // This is expected for some websites (timeout, network issues, etc.)
   }
 
   // Sort by score (highest first) and return
