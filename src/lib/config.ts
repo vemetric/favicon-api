@@ -25,7 +25,7 @@ const envSchema = z.object({
   // Request handling
   REQUEST_TIMEOUT: z.string().default('5000').transform(Number).pipe(z.number().int().min(1000)),
   MAX_IMAGE_SIZE: z.string().default('5242880').transform(Number).pipe(z.number().int().min(1024)),
-  USER_AGENT: z.string().default('Vemetric-FaviconAPI/1.0'),
+  USER_AGENT: z.string().default('FaviconAPI/1.0 (+https://vemetric.com/favicon-api)'),
 
   // CORS
   ALLOWED_ORIGINS: z.string().default('*'),

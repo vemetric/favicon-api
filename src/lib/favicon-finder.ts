@@ -8,6 +8,13 @@ import type { FaviconSource, WebManifest } from '../types';
 import type { AppConfig } from './config';
 
 /**
+ * Browser-like User-Agent for HTML parsing (sites often block bots for HTML)
+ * We use the honest User-Agent from config for actual resource fetching
+ */
+const BROWSER_USER_AGENT =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
+
+/**
  * Find all possible favicon URLs for a given website
  */
 export async function findFavicons(url: string, config: AppConfig): Promise<FaviconSource[]> {
@@ -60,7 +67,10 @@ async function fetchHtml(
 ): Promise<{ html: string; finalUrl: string }> {
   const response = await fetch(url, {
     headers: {
-      'User-Agent': config.USER_AGENT,
+      // Use browser-like UA for HTML parsing since sites often block bots
+      'User-Agent': BROWSER_USER_AGENT,
+      Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.9',
     },
     signal: AbortSignal.timeout(config.REQUEST_TIMEOUT),
     redirect: 'follow',
@@ -115,7 +125,9 @@ async function extractFromManifest(baseUrl: string, config: AppConfig): Promise<
   try {
     const manifestUrl = `${baseUrl}/manifest.json`;
     const response = await fetch(manifestUrl, {
-      headers: { 'User-Agent': config.USER_AGENT },
+      headers: {
+        'User-Agent': config.USER_AGENT,
+      },
       signal: AbortSignal.timeout(config.REQUEST_TIMEOUT),
     });
 
@@ -214,7 +226,9 @@ export async function fetchBestFavicon(
   for (const favicon of favicons) {
     try {
       const response = await fetch(favicon.url, {
-        headers: { 'User-Agent': config.USER_AGENT },
+        headers: {
+          'User-Agent': config.USER_AGENT,
+        },
         signal: AbortSignal.timeout(config.REQUEST_TIMEOUT),
       });
 
