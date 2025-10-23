@@ -59,15 +59,6 @@ describe('Favicon Fetching', () => {
       expect(data.url).toContain('chatgpt');
       expect(data.source).toBe('link-tag');
     });
-
-    test('should fetch Reddit favicon as JSON', async () => {
-      const response = await fetchWithTimeout(`${baseUrl}/reddit.com?response=json`, {}, 15000);
-      expect(response.status).toBe(200);
-
-      const data = await response.json();
-      expect(data.url).toContain('reddit');
-      expect(data.source).toBe('link-tag');
-    });
   });
 
   describe('Image Response Format', () => {

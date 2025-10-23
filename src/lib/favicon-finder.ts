@@ -59,12 +59,6 @@ export async function findFavicons(url: string, config: AppConfig): Promise<Favi
       source: 'fallback',
       score: 10,
     });
-
-    favicons.push({
-      url: `${baseUrl}/apple-touch-icon.png`,
-      source: 'fallback',
-      score: 20,
-    });
   }
 
   // Sort by score (highest first) and return
