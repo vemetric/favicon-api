@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/vemetric/favicon-api/actions/workflows/ci.yml/badge.svg)](https://github.com/vemetric/favicon-api/actions/workflows/ci.yml)
 
-A high-performance, self-hostable favicon API service built with TypeScript, Hono, and Bun. Fetch and serve website favicons with multiple format options, intelligent fallbacks, and proper HTTP caching.
+A free & self-hostable favicon API service built with TypeScript, Hono, and Bun. Fetch and serve website favicons with multiple format options, intelligent fallbacks, and proper HTTP caching.
 
 **Powered by [Vemetric](https://vemetric.com)**
 
@@ -80,15 +80,14 @@ docker run -d \
 ### Single Endpoint
 
 ```
-GET /<domain>&format=<json|image>&size=<number>&type=<png|jpg|ico|svg>&default=<url>
+GET /<domain>&format=<json|image>&size=<number>&type=<png|jpg|svg>&default=<url>
 ```
 
 ### Query Parameters
 
-- `url` (required): Target website URL (e.g., `example.com` or `https://example.com`)
 - `format` (optional): Response format - `image` (default) or `json`
 - `size` (optional): Desired image size in pixels (16-512)
-- `type` (optional): Output format - `png`, `jpg`, `ico`, `webp`, `svg`
+- `type` (optional): Output format - `png`, `jpg`, `webp`
 - `default` (optional): Fallback image URL (overrides server config)
 
 ### Examples
@@ -123,60 +122,9 @@ curl "http://localhost:3000/github.com&type=png&size=128"
 curl "http://localhost:3000/example.com&default=https://mysite.com/fallback.png"
 ```
 
-### Response Examples
-
-**Image Response (default):**
-
-```
-Content-Type: image/png
-Cache-Control: public, max-age=604800
-CDN-Cache-Control: public, max-age=604800
-ETag: "abc123"
-[Binary image data]
-```
-
-**JSON Response:**
-
-```json
-{
-  "url": "https://github.githubassets.com/favicons/favicon.svg",
-  "width": 0,
-  "height": 0,
-  "format": "svg",
-  "size": 959,
-  "source": "link-tag"
-}
-```
-
 ## Configuration
 
 Create a `.env` file (see `.env.example`):
-
-```env
-# Server
-PORT=3000
-HOST=0.0.0.0
-
-# Default fallback image (optional)
-DEFAULT_IMAGE_URL=https://example.com/default-favicon.png
-
-# Cache control headers (seconds) - applies to both browser and CDN
-# 604800 seconds = 7 days
-CACHE_CONTROL_SUCCESS=604800
-CACHE_CONTROL_ERROR=604800
-
-# Request handling
-REQUEST_TIMEOUT=5000
-MAX_IMAGE_SIZE=5242880
-USER_AGENT=FaviconAPI/1.0
-
-# CORS
-ALLOWED_ORIGINS=*
-
-# Security
-BLOCK_PRIVATE_IPS=true
-MAX_REDIRECTS=5
-```
 
 ## Architecture
 
@@ -191,8 +139,6 @@ For production, add a **caching layer** in front (CDN or reverse proxy):
 - **Cloudflare** (free tier)
 - **BunnyCDN, KeyCDN** (paid)
 - **Nginx/Caddy** (self-hosted)
-
-This separation of concerns keeps the app simple and horizontally scalable.
 
 ## Development
 
@@ -219,56 +165,9 @@ bun run lint
 bun run format
 ```
 
-## Testing
-
-The project includes comprehensive integration tests covering:
-
-- Health endpoint functionality
-- Favicon fetching from real websites
-- Error handling and validation
-- Cache header generation
-- Image processing and format conversion
-
-Run tests with:
-
-```bash
-bun test
-```
-
-All tests run against a dedicated test server (port 3001) to avoid conflicts with the development server.
-
-## Project Structure
-
-```
-/src
-  /lib
-    favicon-finder.ts    # Favicon discovery logic
-    image-processor.ts   # Image processing with Sharp
-    validators.ts        # Input validation & SSRF protection
-    http-headers.ts      # HTTP cache header generation
-    config.ts            # Configuration management
-  /types
-    index.ts             # TypeScript types & interfaces
-  index.ts               # Main Hono application
-  server.ts              # Bun server entry point
-```
-
 ## Deployment
 
-### Option 1: Direct with Bun (No Docker)
-
-```bash
-# Install Bun
-curl -fsSL https://bun.sh/install | bash
-
-# Clone and run
-git clone your-repo
-cd favicon-api
-bun install
-bun run start
-```
-
-### Option 2: Docker (Recommended)
+### Option 1: Docker (Recommended)
 
 **Using Pre-built Image:**
 
@@ -302,6 +201,19 @@ docker run -d \
 curl http://your-server-ip:3000/health
 ```
 
+### Option 2: Direct with Bun (No Docker)
+
+```bash
+# Install Bun
+curl -fsSL https://bun.sh/install | bash
+
+# Clone and run
+git clone your-repo
+cd favicon-api
+bun install
+bun run start
+```
+
 ### With CDN (Recommended for Production)
 
 **Cloudflare Setup:**
@@ -317,31 +229,24 @@ curl http://your-server-ip:3000/health
 2. Enable "Respect Cache Headers"
 3. Point CNAME to CDN hostname
 
-## Security
-
-- ✅ URL validation and sanitization
-- ✅ SSRF protection (blocks private IPs)
-- ✅ Request timeouts and size limits
-- ✅ Input validation on all parameters
-- ✅ Proper CORS configuration
-
-## Performance
-
-- **Direct origin**: ~200-500ms per request
-- **With CDN (cached)**: <50ms globally
-- **Stateless design**: Easy horizontal scaling
-
 ## Favicon Sources
 
 The API searches multiple sources for favicons:
 
 1. `<link rel="icon">` tags
 2. `<link rel="apple-touch-icon">` tags
-3. `<meta property="og:image">` tags
-4. Web manifest files (`manifest.json`)
-5. Common fallback locations (`/favicon.ico`, `/apple-touch-icon.png`)
+3. Web manifest files (`manifest.json`)
+4. Common fallback locations (`/favicon.ico`, `/apple-touch-icon.png`)
 
 Favicons are ranked by quality (size, format, source) and the best one is returned.
+
+## Used by
+
+The following projects are using the Favicon API:
+
+- [Vemetric](https://vemetric.com) - Simple, yet actionable Web & Product Analytics
+
+Are you using the Favicon API and wanna be listed here? Feel free to file a Pull Request!
 
 ## Credits
 

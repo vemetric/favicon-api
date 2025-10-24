@@ -125,7 +125,7 @@ export async function processImage(
     }
 
     // Convert format if specified
-    if (options.format && options.format !== 'svg') {
+    if (options.format) {
       pipeline = applyFormat(pipeline, options.format, options.quality);
     }
 

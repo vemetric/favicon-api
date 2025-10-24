@@ -77,7 +77,7 @@ export const queryParamsSchema = (blockPrivateIps: boolean) =>
           .max(512, 'Size must be between 16 and 512 pixels')
           .optional()
       ),
-    format: z.enum(['png', 'jpg', 'jpeg', 'ico', 'webp', 'svg']).optional(),
+    format: z.enum(['png', 'jpg', 'webp']).optional(),
     default: z.url('Default image must be a valid URL').optional(),
   });
 
