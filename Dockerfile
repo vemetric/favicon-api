@@ -1,25 +1,32 @@
 # Multi-stage Dockerfile for Favicon API
 # Uses Bun runtime for fast TypeScript execution
 
-FROM oven/bun:1.2-slim AS base
+# Build stage
+FROM oven/bun:1.2-slim AS builder
 WORKDIR /app
-
-# Install Sharp dependencies (libvips) and curl for health checks
-RUN apt-get update && apt-get install -y \
-    libvips-dev \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
 
 # Copy package files
 COPY package.json bun.lock ./
 
 # Install dependencies
-FROM base AS install
 RUN bun install --frozen-lockfile --production
 
-# Production build
-FROM base AS production
-COPY --from=install /app/node_modules ./node_modules
+# Production stage
+FROM oven/bun:1.2-slim AS production
+WORKDIR /app
+
+# Install only runtime dependencies for Sharp (not dev packages)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libvips42 \
+    wget \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Copy dependencies from builder
+COPY --from=builder /app/node_modules ./node_modules
+
+# Copy application code
 COPY . .
 
 # Create non-root user
@@ -31,7 +38,7 @@ USER bunuser
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:3000/health || exit 1
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1
 
 ENV NODE_ENV production
 
