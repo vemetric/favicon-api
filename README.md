@@ -13,7 +13,6 @@ A high-performance, self-hostable favicon API service built with TypeScript, Hon
 - **Format Support**: PNG, JPG, ICO, WebP, SVG
 - **Image Processing**: Resize and convert images on-the-fly
 - **Caching Ready**: Sets proper HTTP cache headers for CDN/proxy integration
-- **Security**: Built-in SSRF protection and input validation
 - **Docker Ready**: Easy deployment with Docker
 - **Fully Typed**: Written in TypeScript with strict type checking
 
