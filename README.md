@@ -1,6 +1,6 @@
 # Favicon API
 
-[![CI](https://github.com/Vemetric/favicon-api/actions/workflows/ci.yml/badge.svg)](https://github.com/Vemetric/favicon-api/actions/workflows/ci.yml)
+[![CI](https://github.com/vemetric/favicon-api/actions/workflows/ci.yml/badge.svg)](https://github.com/vemetric/favicon-api/actions/workflows/ci.yml)
 
 A high-performance, self-hostable favicon API service built with TypeScript, Hono, and Bun. Fetch and serve website favicons with multiple format options, intelligent fallbacks, and proper HTTP caching.
 
@@ -33,16 +33,15 @@ bun run dev
 
 ### Using Docker
 
-```bash
-# Build the image
-docker build -t favicon-api .
+**Option 1: Use Pre-built Image from Docker Hub**
 
+```bash
 # Run with default settings
 docker run -d \
   -p 3000:3000 \
   --name favicon-api \
   --restart unless-stopped \
-  favicon-api
+  vemetric/favicon-api
 
 # Or run with custom configuration
 docker run -d \
@@ -57,10 +56,24 @@ docker run -d \
   -e MAX_IMAGE_SIZE=5242880 \
   -e ALLOWED_ORIGINS=* \
   -e BLOCK_PRIVATE_IPS=true \
-  favicon-api
+  vemetric/favicon-api
 
 # Check it's running
 curl http://localhost:3000/health
+```
+
+**Option 2: Build from Source**
+
+```bash
+# Build the image
+docker build -t favicon-api .
+
+# Run the locally built image
+docker run -d \
+  -p 3000:3000 \
+  --name favicon-api \
+  --restart unless-stopped \
+  favicon-api
 ```
 
 ## API Usage
@@ -258,9 +271,24 @@ bun run start
 
 ### Option 2: Docker (Recommended)
 
+**Using Pre-built Image:**
+
 ```bash
-# On your VPS (1-2 GB RAM recommended)
-git clone your-repo
+# Pull and run from Docker Hub
+docker run -d \
+  -p 3000:3000 \
+  --name favicon-api \
+  --restart unless-stopped \
+  vemetric/favicon-api
+
+# Verify it's running
+curl http://your-server-ip:3000/health
+```
+
+**Building from Source:**
+
+```bash
+git clone https://github.com/vemetric/favicon-api.git
 cd favicon-api
 
 # Build and run
@@ -269,7 +297,6 @@ docker run -d \
   -p 3000:3000 \
   --name favicon-api \
   --restart unless-stopped \
-  -e DEFAULT_IMAGE_URL=https://example.com/default.png \
   favicon-api
 
 # Verify it's running
@@ -317,13 +344,9 @@ The API searches multiple sources for favicons:
 
 Favicons are ranked by quality (size, format, source) and the best one is returned.
 
-## License
-
-MIT
-
 ## Credits
 
-Built with:
+This project was mainly coded using [Claude Code](https://www.claude.com/product/claude-code). We're also using the following libraries:
 
 - [Bun](https://bun.sh) - Fast JavaScript runtime
 - [Hono](https://hono.dev) - Lightweight web framework
