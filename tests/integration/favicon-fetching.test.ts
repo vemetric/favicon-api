@@ -48,7 +48,7 @@ describe('Favicon Fetching', () => {
 
       const data = await response.json();
       expect(data.url).toContain('stackoverflow');
-      expect(data.source).toBe('fallback');
+      expect(data.source).toBe('link-tag');
     });
 
     test('should fetch ChatGPT favicon as JSON', async () => {

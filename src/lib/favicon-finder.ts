@@ -67,14 +67,36 @@ export async function findFavicons(url: string, config: AppConfig): Promise<Favi
 
 /**
  * Fetch HTML content from URL and return final URL after redirects
+ * First attempts with honest USER_AGENT, falls back to BROWSER_USER_AGENT if needed
  */
 async function fetchHtml(
   url: string,
   config: AppConfig
 ): Promise<{ html: string; finalUrl: string }> {
+  // Try with honest USER_AGENT first
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': config.USER_AGENT,
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+      },
+      signal: AbortSignal.timeout(config.REQUEST_TIMEOUT),
+      redirect: 'follow',
+    });
+
+    if (response.ok) {
+      const html = await response.text();
+      const finalUrl = response.url;
+      return { html, finalUrl };
+    }
+  } catch {
+    // First attempt failed, will try with browser UA
+  }
+
+  // Fallback: Try with browser-like UA if honest UA failed
   const response = await fetch(url, {
     headers: {
-      // Use browser-like UA for HTML parsing since sites often block bots
       'User-Agent': BROWSER_USER_AGENT,
       Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
       'Accept-Language': 'en-US,en;q=0.9',
@@ -88,7 +110,6 @@ async function fetchHtml(
   }
 
   const html = await response.text();
-  // Get the final URL after any redirects
   const finalUrl = response.url;
 
   return { html, finalUrl };
