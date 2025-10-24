@@ -3,6 +3,7 @@
  * Handles resizing, format conversion, and optimization
  */
 
+import type { Sharp } from 'sharp';
 import sharp from 'sharp';
 import { sharpsFromIco } from 'sharp-ico';
 import type { ImageProcessOptions, ProcessedImage } from '../types';
@@ -58,10 +59,29 @@ export async function processImage(
         // Convert ICO to Sharp instance(s), get the largest one
         const sharpInstances = await sharpsFromIco(imageData);
         if (sharpInstances.length > 0) {
-          // sharp-ico returns instances sorted by size (largest first)
-          const largestSharp = sharpInstances[0] as sharp.Sharp;
-          originalMetadata = await largestSharp.metadata();
+          // Find the largest icon by examining metadata of all instances
+          let largestSharp: Sharp | null = null;
+          let largestSize = 0;
+
+          for (const sharpInstance of sharpInstances) {
+            if (!('metadata' in sharpInstance)) {
+              continue;
+            }
+
+            const metadata = await sharpInstance.metadata();
+            const size = (metadata.width || 0) * (metadata.height || 0);
+            if (size > largestSize) {
+              largestSize = size;
+              largestSharp = sharpInstance;
+            }
+          }
+
           detectedFormat = 'ico';
+          if (!largestSharp) {
+            throw new Error('No valid Sharp instance found in ICO');
+          }
+
+          originalMetadata = await largestSharp.metadata();
 
           // Convert the Sharp instance to a buffer for further processing
           workingBuffer = await largestSharp.png().toBuffer();
