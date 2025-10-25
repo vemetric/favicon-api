@@ -6,6 +6,7 @@
 import * as cheerio from 'cheerio';
 import type { FaviconSource, WebManifest } from '../types';
 import type { AppConfig } from './config';
+import { validateImage } from './image-processor';
 
 /**
  * Browser-like User-Agent for HTML parsing (sites often block bots for HTML)
@@ -264,9 +265,14 @@ export async function fetchBestFavicon(
         const arrayBuffer = await response.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
 
+        // Validate buffer size and that it contains valid image data
         if (buffer.length > 0 && buffer.length <= config.MAX_IMAGE_SIZE) {
-          const format = detectFormat(buffer, favicon.format);
-          return { data: buffer, format, source: favicon.source, url: favicon.url };
+          // Check if buffer contains valid image data before returning
+          const isValid = await validateImage(buffer);
+          if (isValid) {
+            const format = detectFormat(buffer, favicon.format);
+            return { data: buffer, format, source: favicon.source, url: favicon.url };
+          }
         }
       }
     } catch {

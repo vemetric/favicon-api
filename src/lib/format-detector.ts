@@ -11,6 +11,17 @@ export function isSvg(buffer: Buffer): boolean {
   return header.includes('<svg') || header.includes('<?xml');
 }
 
+export function isIco(buffer: Buffer): boolean {
+  const isIco =
+    buffer.length >= 4 &&
+    buffer[0] === 0x00 &&
+    buffer[1] === 0x00 &&
+    buffer[2] === 0x01 &&
+    buffer[3] === 0x00;
+
+  return isIco;
+}
+
 /**
  * Detect image format from buffer magic numbers
  * @param buffer - Image data buffer

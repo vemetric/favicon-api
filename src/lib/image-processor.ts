@@ -7,7 +7,7 @@ import type { Sharp } from 'sharp';
 import sharp from 'sharp';
 import { sharpsFromIco } from 'sharp-ico';
 import type { ImageProcessOptions, ProcessedImage } from '../types';
-import { detectFormatFromBuffer, isSvg } from './format-detector';
+import { detectFormatFromBuffer, isIco, isSvg } from './format-detector';
 
 /**
  * Process image: resize, convert format, optimize
@@ -46,15 +46,7 @@ export async function processImage(
     let originalMetadata: sharp.Metadata | null = null;
     let detectedFormat = 'png';
 
-    // Detect if this is an ICO file
-    const isIco =
-      imageData.length >= 4 &&
-      imageData[0] === 0x00 &&
-      imageData[1] === 0x00 &&
-      imageData[2] === 0x01 &&
-      imageData[3] === 0x00;
-
-    if (isIco) {
+    if (isIco(imageData)) {
       try {
         // Convert ICO to Sharp instance(s), get the largest one
         const sharpInstances = await sharpsFromIco(imageData);
@@ -197,6 +189,10 @@ function applyFormat(pipeline: sharp.Sharp, format: string, quality?: number): s
  */
 export async function validateImage(buffer: Buffer): Promise<boolean> {
   try {
+    if (isSvg(buffer) || isIco(buffer)) {
+      return true;
+    }
+
     await sharp(buffer).metadata();
     return true;
   } catch {
