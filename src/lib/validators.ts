@@ -43,16 +43,25 @@ const createUrlValidator = (blockPrivateIps: boolean) =>
         .url('Invalid URL format')
         .refine(
           (url) => {
-            const parsed = new URL(url);
-            // Check protocol
-            if (!['http:', 'https:'].includes(parsed.protocol)) {
+            try {
+              const parsed = new URL(url);
+              // Check protocol
+              if (!['http:', 'https:'].includes(parsed.protocol)) {
+                return false;
+              }
+              // Check that hostname is not empty
+              if (!parsed.hostname) {
+                return false;
+              }
+              // SSRF protection
+              if (blockPrivateIps && isPrivateIp(parsed.hostname)) {
+                return false;
+              }
+              return true;
+            } catch {
+              // If URL constructor throws, it's an invalid URL
               return false;
             }
-            // SSRF protection
-            if (blockPrivateIps && isPrivateIp(parsed.hostname)) {
-              return false;
-            }
-            return true;
           },
           {
             message: 'Invalid URL or access to private IPs not allowed',

@@ -76,6 +76,24 @@ describe('Error Handling', () => {
       expect([200, 400, 404, 500]).toContain(response.status);
     });
 
+    test('should return 400 for incomplete URL (https://)', async () => {
+      const response = await fetchWithTimeout(`${baseUrl}/https://`);
+      expect(response.status).toBe(400);
+
+      const data = await response.json();
+      expect(data.error).toBeDefined();
+      expect(data.error).toContain('Invalid URL');
+    });
+
+    test('should return 400 for incomplete URL (http://)', async () => {
+      const response = await fetchWithTimeout(`${baseUrl}/http://`);
+      expect(response.status).toBe(400);
+
+      const data = await response.json();
+      expect(data.error).toBeDefined();
+      expect(data.error).toContain('Invalid URL');
+    });
+
     test('should handle non-existent domain gracefully', async () => {
       const response = await fetchWithTimeout(
         `${baseUrl}/this-domain-definitely-does-not-exist-12345.com?response=json`,
