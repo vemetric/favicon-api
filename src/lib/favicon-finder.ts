@@ -217,6 +217,7 @@ function calculateScore(size: number | undefined, type: string | undefined, rel:
   // Format preference
   if (type?.includes('png')) score += 20;
   else if (type?.includes('webp')) score += 15;
+  else if (type?.includes('gif')) score += 10;
   else if (type?.includes('ico')) score += 5;
 
   // Rel attribute preference
@@ -293,6 +294,7 @@ function detectFormat(buffer: Buffer, hint?: string): string {
   if (buffer[0] === 0xff && buffer[1] === 0xd8) return 'jpg';
   if (buffer[0] === 0x00 && buffer[1] === 0x00) return 'ico';
   if (buffer[0] === 0x52 && buffer[1] === 0x49) return 'webp';
+  if (buffer[0] === 0x47 && buffer[1] === 0x49 && buffer[2] === 0x46) return 'gif';
   if (buffer.toString('utf8', 0, 5).includes('<svg')) return 'svg';
 
   // Fallback to hint
@@ -301,6 +303,7 @@ function detectFormat(buffer: Buffer, hint?: string): string {
   if (hintStr.includes('jpeg') || hintStr.includes('jpg')) return 'jpg';
   if (hintStr.includes('webp')) return 'webp';
   if (hintStr.includes('svg')) return 'svg';
+  if (hintStr.includes('gif')) return 'gif';
   if (hintStr.includes('ico')) return 'ico';
 
   return 'png'; // Default

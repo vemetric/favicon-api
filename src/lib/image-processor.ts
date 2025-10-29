@@ -7,7 +7,8 @@ import type { Sharp } from 'sharp';
 import sharp from 'sharp';
 import { sharpsFromIco } from 'sharp-ico';
 import type { ImageProcessOptions, ProcessedImage } from '../types';
-import { detectFormatFromBuffer, isIco, isSvg } from './format-detector';
+import { detectFormatFromBuffer, isIco, isSvg, isGif } from './format-detector';
+import isAnimated from 'is-animated';
 
 /**
  * Process image: resize, convert format, optimize
@@ -39,6 +40,33 @@ export async function processImage(
         };
       }
       // If format conversion to raster is requested, rasterize the SVG
+    }
+
+    // Handle animated images pass-through, because else we would lose the animation with sharp processing
+    // Pass through animated images unless format conversion is requested
+    if (isAnimated(imageData)) {
+      if (!options.format && !options.size) {
+        // Get metadata to extract dimensions
+        try {
+          const metadata = await sharp(imageData).metadata();
+          return {
+            data: imageData,
+            format: 'gif',
+            width: metadata.width || 0,
+            height: metadata.height || 0,
+            bytes: imageData.length,
+          };
+        } catch {
+          // If metadata fails, return as-is
+          return {
+            data: imageData,
+            format: 'gif',
+            width: 0,
+            height: 0,
+            bytes: imageData.length,
+          };
+        }
+      }
     }
 
     // Handle ICO files specially since Sharp doesn't support them natively
@@ -190,6 +218,10 @@ function applyFormat(pipeline: sharp.Sharp, format: string, quality?: number): s
 export async function validateImage(buffer: Buffer): Promise<boolean> {
   try {
     if (isSvg(buffer) || isIco(buffer)) {
+      return true;
+    }
+
+    if (isGif(buffer)) {
       return true;
     }
 

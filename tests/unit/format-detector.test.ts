@@ -6,6 +6,7 @@ import { describe, test, expect } from 'bun:test';
 import {
   detectFormatFromBuffer,
   isSvg,
+  isGif,
   getContentTypeFromFormat,
   isSupportedBySharp,
 } from '../../src/lib/format-detector';
@@ -33,9 +34,18 @@ describe('Format Detector Utilities', () => {
     test('should detect WebP format from RIFF header', () => {
       // WebP signature: RIFF ... WEBP
       const webpBuffer = Buffer.from([
-        0x52, 0x49, 0x46, 0x46, // RIFF
-        0x00, 0x00, 0x00, 0x00, // File size
-        0x57, 0x45, 0x42, 0x50, // WEBP
+        0x52,
+        0x49,
+        0x46,
+        0x46, // RIFF
+        0x00,
+        0x00,
+        0x00,
+        0x00, // File size
+        0x57,
+        0x45,
+        0x42,
+        0x50, // WEBP
       ]);
       expect(detectFormatFromBuffer(webpBuffer)).toBe('webp');
     });
@@ -53,7 +63,9 @@ describe('Format Detector Utilities', () => {
     });
 
     test('should detect SVG format from XML content', () => {
-      const svgBuffer = Buffer.from('<?xml version="1.0"?><svg xmlns="http://www.w3.org/2000/svg">');
+      const svgBuffer = Buffer.from(
+        '<?xml version="1.0"?><svg xmlns="http://www.w3.org/2000/svg">'
+      );
       expect(detectFormatFromBuffer(svgBuffer)).toBe('svg');
     });
 
@@ -75,9 +87,18 @@ describe('Format Detector Utilities', () => {
     test('should handle AVIF format detection', () => {
       // AVIF uses ISO Base Media File Format with ftyp box
       const avifBuffer = Buffer.from([
-        0x00, 0x00, 0x00, 0x20, // Box size
-        0x66, 0x74, 0x79, 0x70, // 'ftyp'
-        0x61, 0x76, 0x69, 0x66, // 'avif' brand
+        0x00,
+        0x00,
+        0x00,
+        0x20, // Box size
+        0x66,
+        0x74,
+        0x79,
+        0x70, // 'ftyp'
+        0x61,
+        0x76,
+        0x69,
+        0x66, // 'avif' brand
       ]);
       expect(detectFormatFromBuffer(avifBuffer)).toBe('avif');
     });
@@ -112,6 +133,33 @@ describe('Format Detector Utilities', () => {
     test('should handle SVG tag in middle of content', () => {
       const buffer = Buffer.from('<!-- comment --><svg>');
       expect(isSvg(buffer)).toBe(true);
+    });
+  });
+
+  describe('isGif', () => {
+    test('should identify GIF by magic numbers (GIF89a)', () => {
+      const gifBuffer = Buffer.from([0x47, 0x49, 0x46, 0x38, 0x39, 0x61]);
+      expect(isGif(gifBuffer)).toBe(true);
+    });
+
+    test('should identify GIF by magic numbers (GIF87a)', () => {
+      const gifBuffer = Buffer.from([0x47, 0x49, 0x46, 0x38, 0x37, 0x61]);
+      expect(isGif(gifBuffer)).toBe(true);
+    });
+
+    test('should return false for non-GIF content', () => {
+      const pngBuffer = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
+      expect(isGif(pngBuffer)).toBe(false);
+    });
+
+    test('should return false for empty buffer', () => {
+      const emptyBuffer = Buffer.from([]);
+      expect(isGif(emptyBuffer)).toBe(false);
+    });
+
+    test('should return false for buffer with insufficient bytes', () => {
+      const smallBuffer = Buffer.from([0x47, 0x49]);
+      expect(isGif(smallBuffer)).toBe(false);
     });
   });
 
@@ -217,8 +265,8 @@ describe('Format Detector Utilities', () => {
     test('should detect format from partial file header', () => {
       // Simulating reading just the beginning of a file
       const jpegHeader = Buffer.from([
-        0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46,
-        0x49, 0x46, 0x00, 0x01, 0x01, 0x00, 0x00, 0x01,
+        0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01, 0x01, 0x00, 0x00,
+        0x01,
       ]);
       expect(detectFormatFromBuffer(jpegHeader)).toBe('jpeg');
     });
@@ -230,9 +278,18 @@ describe('Format Detector Utilities', () => {
 
     test('should detect WebP with different RIFF sizes', () => {
       const webpBuffer = Buffer.from([
-        0x52, 0x49, 0x46, 0x46,
-        0xaa, 0xbb, 0xcc, 0xdd, // Different size
-        0x57, 0x45, 0x42, 0x50,
+        0x52,
+        0x49,
+        0x46,
+        0x46,
+        0xaa,
+        0xbb,
+        0xcc,
+        0xdd, // Different size
+        0x57,
+        0x45,
+        0x42,
+        0x50,
       ]);
       expect(detectFormatFromBuffer(webpBuffer)).toBe('webp');
     });

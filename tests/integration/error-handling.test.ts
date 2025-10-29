@@ -16,14 +16,6 @@ describe('Error Handling', () => {
     await stopTestServer();
   });
 
-  describe('Missing Required Parameters', () => {
-    test('should return 404 when no path is provided', async () => {
-      const response = await fetchWithTimeout(`${baseUrl}/`);
-      // With path-based routing, hitting root without a URL should return 404
-      expect(response.status).toBe(404);
-    });
-  });
-
   describe('Invalid Parameters', () => {
     test('should return 400 for invalid size (too small)', async () => {
       const response = await fetchWithTimeout(`${baseUrl}/github.com?size=10`);

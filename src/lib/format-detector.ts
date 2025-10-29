@@ -23,6 +23,13 @@ export function isIco(buffer: Buffer): boolean {
 }
 
 /**
+ * Check if buffer contains GIF data
+ */
+export function isGif(buffer: Buffer): boolean {
+  return buffer.length >= 3 && buffer[0] === 0x47 && buffer[1] === 0x49 && buffer[2] === 0x46;
+}
+
+/**
  * Detect image format from buffer magic numbers
  * @param buffer - Image data buffer
  * @returns Detected format string (png, jpeg, ico, webp, svg, gif)
