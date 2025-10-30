@@ -6,7 +6,8 @@
 import * as cheerio from 'cheerio';
 import type { FaviconSource, WebManifest } from '../types';
 import type { AppConfig } from './config';
-import { validateImage } from './image-processor';
+import { parseDataUrl, validateImage } from './image-processor';
+import { isDataUrl } from './validators';
 
 /**
  * Browser-like User-Agent for HTML parsing (sites often block bots for HTML)
@@ -127,8 +128,19 @@ function extractFromLinkTags($: cheerio.CheerioAPI, baseUrl: string): FaviconSou
     if (!href) return;
 
     const sizes = $(element).attr('sizes');
-    const type = $(element).attr('type') || href.split('.').pop() || '';
+    let type = $(element).attr('type') || '';
     const rel = $(element).attr('rel') || '';
+
+    if (!type) {
+      if (isDataUrl(href)) {
+        const mimeMatch = href.match(/^data:([^;,]+)/);
+        if (mimeMatch && mimeMatch[1]) {
+          type = mimeMatch[1];
+        }
+      } else {
+        type = href.split('.').pop() || '';
+      }
+    }
 
     const size = parseSizes(sizes);
     const score = calculateScore(size, type, rel);
@@ -231,6 +243,11 @@ function calculateScore(size: number | undefined, type: string | undefined, rel:
  * Resolve relative URL to absolute
  */
 function resolveUrl(url: string, baseUrl: string): string {
+  // Handle data URLs (inline images)
+  if (isDataUrl(url)) {
+    return url;
+  }
+
   if (url.startsWith('http')) {
     return url;
   }
@@ -255,25 +272,37 @@ export async function fetchBestFavicon(
 ): Promise<{ data: Buffer; format: string; source: string; url: string } | null> {
   for (const favicon of favicons) {
     try {
-      const response = await fetch(favicon.url, {
-        headers: {
-          'User-Agent': config.USER_AGENT,
-        },
-        signal: AbortSignal.timeout(config.REQUEST_TIMEOUT),
-      });
+      let buffer: Buffer;
+      let mimeType: string | undefined;
 
-      if (response.ok) {
+      // Check if this is a data URL
+      if (isDataUrl(favicon.url)) {
+        const parsed = parseDataUrl(favicon.url);
+        if (!parsed) continue;
+        buffer = parsed.buffer;
+        mimeType = parsed.mimeType;
+      } else {
+        // Regular HTTP(S) URL - fetch it
+        const response = await fetch(favicon.url, {
+          headers: {
+            'User-Agent': config.USER_AGENT,
+          },
+          signal: AbortSignal.timeout(config.REQUEST_TIMEOUT),
+        });
+
+        if (!response.ok) continue;
+
         const arrayBuffer = await response.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
+        buffer = Buffer.from(arrayBuffer);
+      }
 
-        // Validate buffer size and that it contains valid image data
-        if (buffer.length > 0 && buffer.length <= config.MAX_IMAGE_SIZE) {
-          // Check if buffer contains valid image data before returning
-          const isValid = await validateImage(buffer);
-          if (isValid) {
-            const format = detectFormat(buffer, favicon.format);
-            return { data: buffer, format, source: favicon.source, url: favicon.url };
-          }
+      // Validate buffer size and that it contains valid image data
+      if (buffer.length > 0 && buffer.length <= config.MAX_IMAGE_SIZE) {
+        // Check if buffer contains valid image data before returning
+        const isValid = await validateImage(buffer);
+        if (isValid) {
+          const format = detectFormat(buffer, mimeType || favicon.format);
+          return { data: buffer, format, source: favicon.source, url: favicon.url };
         }
       }
     } catch {

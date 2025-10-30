@@ -274,3 +274,33 @@ function extractSvgDimensions(buffer: Buffer): { width: number; height: number }
     return { width: 0, height: 0 };
   }
 }
+
+/**
+ * Parse data URL and extract the image buffer
+ * Supports both base64 and URL-encoded data URLs
+ */
+export function parseDataUrl(dataUrl: string): { buffer: Buffer; mimeType: string } | null {
+  try {
+    // Data URL format: data:[<media type>][;base64],<data>
+    const match = dataUrl.match(/^data:([^;,]+)?(;base64)?,(.+)$/);
+    if (!match || !match[3]) return null;
+
+    const mimeType = match[1] || 'text/plain';
+    const isBase64 = match[2] === ';base64';
+    const data = match[3];
+
+    let buffer: Buffer;
+    if (isBase64) {
+      // Base64-encoded data
+      buffer = Buffer.from(data, 'base64');
+    } else {
+      // URL-encoded data - decode it
+      const decoded = decodeURIComponent(data);
+      buffer = Buffer.from(decoded, 'utf8');
+    }
+
+    return { buffer, mimeType };
+  } catch {
+    return null;
+  }
+}

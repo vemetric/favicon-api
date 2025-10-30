@@ -91,3 +91,7 @@ export const queryParamsSchema = (blockPrivateIps: boolean) =>
   });
 
 export type QueryParams = z.infer<ReturnType<typeof queryParamsSchema>>;
+
+export function isDataUrl(url: string): boolean {
+  return url.startsWith('data:');
+}
