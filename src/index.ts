@@ -58,9 +58,15 @@ export function createApp(config: AppConfig) {
   // Root endpoint - redirect to documentation when no path param or query params
   app.get('/', async (c) => {
     const url = new URL(c.req.url);
-    // Check if there are no query parameters - redirect to docs
+    // Check if there are no query parameters
     if (url.search === '' || url.searchParams.toString() === '') {
-      return c.redirect('https://vemetric.com/favicon-api', 302);
+      // If REDIRECT_URL is configured, redirect to it
+      if (config.REDIRECT_URL) {
+        return c.redirect(config.REDIRECT_URL, 302);
+      }
+      // Otherwise, return 400 error for self-hosters
+      const headers = generateErrorHeaders(config);
+      return c.json({ error: 'Domain parameter is required' }, 400, headers);
     }
 
     // If there are query params but no URL, return fallback image

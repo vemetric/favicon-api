@@ -44,6 +44,9 @@ const envSchema = z.object({
   // Analytics (Vemetric integration - optional)
   VEMETRIC_TOKEN: z.string().optional(),
   VEMETRIC_HOST: z.string().optional(),
+
+  // Redirect URL for requests without domain (optional for self-hosters)
+  REDIRECT_URL: z.string().url().optional(),
 });
 
 // Infer the TypeScript type from the schema
@@ -70,6 +73,7 @@ export function loadConfig(): AppConfig {
       AXIOM_TOKEN: process.env.AXIOM_TOKEN,
       VEMETRIC_TOKEN: process.env.VEMETRIC_TOKEN,
       VEMETRIC_HOST: process.env.VEMETRIC_HOST,
+      REDIRECT_URL: process.env.REDIRECT_URL,
     });
 
     // Note: Don't use logger here as it may not be initialized yet
