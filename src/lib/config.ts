@@ -47,6 +47,12 @@ const envSchema = z.object({
 
   // Redirect URL for requests without domain (optional for self-hosters)
   REDIRECT_URL: z.string().url().optional(),
+
+  // Fallback API (Google's favicon API) - enabled by default
+  USE_FALLBACK_API: z
+    .string()
+    .default('true')
+    .transform((val) => val !== 'false'),
 });
 
 // Infer the TypeScript type from the schema
@@ -74,6 +80,7 @@ export function loadConfig(): AppConfig {
       VEMETRIC_TOKEN: process.env.VEMETRIC_TOKEN,
       VEMETRIC_HOST: process.env.VEMETRIC_HOST,
       REDIRECT_URL: process.env.REDIRECT_URL,
+      USE_FALLBACK_API: process.env.USE_FALLBACK_API,
     });
 
     // Note: Don't use logger here as it may not be initialized yet

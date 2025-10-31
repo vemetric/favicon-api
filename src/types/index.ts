@@ -6,7 +6,7 @@ export interface FaviconSource {
   url: string;
   size?: number;
   format?: string;
-  source: 'link-tag' | 'manifest' | 'fallback';
+  source: 'link-tag' | 'manifest' | 'fallback' | 'fallback-api';
   score: number;
 }
 

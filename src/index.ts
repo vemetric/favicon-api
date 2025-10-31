@@ -137,7 +137,7 @@ export function createApp(config: AppConfig) {
           // oxlint-disable-next-line no-async-promise-executor
           async (resolve) => {
             try {
-              const favicons = await findFavicons(url, config);
+              const favicons = await findFavicons(url, config, size);
               if (favicons == null || favicons.length === 0) {
                 resolve(null);
               } else {

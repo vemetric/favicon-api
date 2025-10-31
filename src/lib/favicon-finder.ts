@@ -19,13 +19,15 @@ const BROWSER_USER_AGENT =
 /**
  * Find all possible favicon URLs for a given website
  */
-export async function findFavicons(url: string, config: AppConfig): Promise<FaviconSource[]> {
+export async function findFavicons(
+  url: string,
+  config: AppConfig,
+  size?: number
+): Promise<FaviconSource[]> {
   const favicons: FaviconSource[] = [];
 
   // Ensure URL has protocol
   const targetUrl = url.startsWith('http') ? url : `https://${url}`;
-  const parsedUrl = new URL(targetUrl);
-  const baseUrl = `${parsedUrl.protocol}//${parsedUrl.hostname}`;
 
   try {
     // Fetch HTML content and get final URL after redirects
@@ -53,13 +55,20 @@ export async function findFavicons(url: string, config: AppConfig): Promise<Favi
     // Try to fetch and parse manifest.json
     const manifestFavicons = await extractFromManifest(finalBaseUrl, config);
     favicons.push(...manifestFavicons);
-  } catch {
-    // HTML parsing failed (403, timeout, etc.) - still try fallback locations
-    // This is expected for some websites with strict bot protection
+  } catch {}
+
+  // Add Google's favicon API as last-resort fallback (if enabled)
+  if (config.USE_FALLBACK_API) {
+    const trimmedDomain = url.trim();
+    const parsedUrl = new URL(
+      trimmedDomain.startsWith('http') ? trimmedDomain : `https://${trimmedDomain}`
+    );
+    const formattedDomain = `https://${parsedUrl.hostname}`;
+
     favicons.push({
-      url: `${baseUrl}/favicon.ico`,
-      source: 'fallback',
-      score: 10,
+      url: `https://www.google.com/s2/favicons?domain=${encodeURIComponent(formattedDomain)}&sz=${size || 64}`,
+      source: 'fallback-api',
+      score: 1, // Lowest priority - try this last
     });
   }
 

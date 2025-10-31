@@ -10,6 +10,7 @@ A free & self-hostable favicon API service built with TypeScript, Hono, and Bun.
 
 - **Fast & Lightweight**: Built on Bun runtime and Hono framework
 - **Smart Discovery**: Automatically finds the best favicon from multiple sources
+- **Fallback API**: Optional fallback to Google's favicon API when primary fetch fails due to bot protection (enabled by default)
 - **Format Support**: PNG, JPG, ICO, WebP, SVG
 - **Image Processing**: Resize and convert images on-the-fly
 - **Caching Ready**: Sets proper HTTP cache headers for CDN/proxy integration
@@ -49,6 +50,7 @@ docker run -d \
   --restart unless-stopped \
   -e PORT=3000 \
   -e DEFAULT_IMAGE_URL=https://example.com/default-favicon.png \
+  -e USE_FALLBACK_API=true \
   -e CACHE_CONTROL_SUCCESS=604800 \
   -e CACHE_CONTROL_ERROR=604800 \
   -e REQUEST_TIMEOUT=5000 \
@@ -237,8 +239,19 @@ The API searches multiple sources for favicons:
 2. `<link rel="apple-touch-icon">` tags
 3. Web manifest files (`manifest.json`)
 4. Common fallback locations (`/favicon.ico`, `/apple-touch-icon.png`)
+5. **Google's favicon API** (optional fallback when primary sources fail due to bot protection or other issues)
 
 Favicons are ranked by quality (size, format, source) and the best one is returned.
+
+### Fallback Strategy
+
+When the primary favicon fetch fails (e.g., due to bot protection), the API can optionally fall back to Google's favicon service:
+
+1. **Primary fetch**: Attempts to fetch favicon from the website's own sources
+2. **Fallback API** (if enabled via `USE_FALLBACK_API=true`): Queries Google's favicon API
+3. **Default image**: Returns the configured default fallback image (or 404 if not configured)
+
+The Google API fallback is enabled by default and provides reliable results even for sites with strict bot protection. To disable it, set `USE_FALLBACK_API=false` in your environment configuration.
 
 ## Used by
 
