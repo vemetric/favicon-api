@@ -85,9 +85,9 @@ GET /<domain>&format=<json|image>&size=<number>&type=<png|jpg|svg>&default=<url>
 
 ### Query Parameters
 
-- `format` (optional): Response format - `image` (default) or `json`
 - `size` (optional): Desired image size in pixels (16-512)
-- `type` (optional): Output format - `png`, `jpg`, `webp`
+- `format` (optional): Image Output format - `png`, `jpg`, `webp`
+- `response` (optional): Response format - `image` (default) or `json`
 - `default` (optional): Fallback image URL (overrides server config)
 
 ### Examples
