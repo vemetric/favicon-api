@@ -245,6 +245,7 @@ Favicons are ranked by quality (size, format, source) and the best one is return
 The following projects are using the Favicon API:
 
 - [Vemetric](https://vemetric.com) - Simple, yet actionable Web & Product Analytics
+- [Orshot](https://orshot.com/) - Scale your Marketing with Automated Visuals
 - [OpenPanel](https://openpanel.com?utm_src=vemetric_readme) - Next Generation Web Hosting Panel
 
 Are you using the Favicon API and wanna be listed here? Feel free to file a Pull Request!
