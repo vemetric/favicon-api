@@ -1,3 +1,5 @@
+![favicon](https://github.com/user-attachments/assets/71b568f4-df46-4925-aa6c-1d2540a7c491)
+
 # Favicon API
 
 [![CI](https://github.com/vemetric/favicon-api/actions/workflows/ci.yml/badge.svg)](https://github.com/vemetric/favicon-api/actions/workflows/ci.yml)
