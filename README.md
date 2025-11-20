@@ -262,6 +262,7 @@ The following projects are using the Favicon API:
 - [Vemetric](https://vemetric.com) - Simple, yet actionable Web & Product Analytics
 - [Orshot](https://orshot.com/) - Scale your Marketing with Automated Visuals
 - [OpenPanel](https://openpanel.com?utm_src=vemetric_readme) - Next Generation Web Hosting Panel
+- [MCP Use Inspector](https://inspector.mcp-use.com) Modern MCP Inspector with Apps SDK Support
 
 Are you using the Favicon API and wanna be listed here? Feel free to file a Pull Request!
 
