@@ -106,7 +106,10 @@ export function createApp(config: AppConfig) {
       };
 
       // Get URL from path parameter
-      const urlParam = c.req.param('url');
+      const rawUrlParam = c.req.param('url');
+
+      // Apply domain mappings (e.g., Android package names to domains)
+      const urlParam = resolveDomainMapping(rawUrlParam);
 
       // Validate query parameters with Zod
       const schema = queryParamsSchema(config.BLOCK_PRIVATE_IPS);
@@ -126,10 +129,7 @@ export function createApp(config: AppConfig) {
         return c.json({ error: errorMessage }, 400, headers);
       }
 
-      const { url: rawUrl, response, size, format, default: defaultImage } = parseResult.data;
-
-      // Apply domain mappings (e.g., Android package names to domains)
-      const url = resolveDomainMapping(rawUrl);
+      const { url, response, size, format, default: defaultImage } = parseResult.data;
 
       // Find favicons
       const timeoutPromise = new Promise<null>((resolve) =>
