@@ -20,6 +20,7 @@ import { getContentTypeFromFormat } from './lib/format-detector';
 import { logRequest, logFaviconFetch, logger } from './lib/logger';
 import { getClientIp } from './lib/request-ip';
 import { getCachedFallback, fetchCustomDefault } from './lib/fallback-image';
+import { resolveDomainMapping } from './lib/domain-mappings';
 
 export function createApp(config: AppConfig) {
   const app = new Hono();
@@ -125,7 +126,10 @@ export function createApp(config: AppConfig) {
         return c.json({ error: errorMessage }, 400, headers);
       }
 
-      const { url, response, size, format, default: defaultImage } = parseResult.data;
+      const { url: rawUrl, response, size, format, default: defaultImage } = parseResult.data;
+
+      // Apply domain mappings (e.g., Android package names to domains)
+      const url = resolveDomainMapping(rawUrl);
 
       // Find favicons
       const timeoutPromise = new Promise<null>((resolve) =>
