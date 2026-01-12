@@ -28,6 +28,23 @@ export async function findFavicons(
 
   // Ensure URL has protocol
   const targetUrl = url.startsWith('http') ? url : `https://${url}`;
+  
+  // Parse base URL - we'll use this for fallbacks even if HTML fetch fails
+  let baseUrl: string;
+  try {
+    const parsedUrl = new URL(targetUrl);
+    baseUrl = `${parsedUrl.protocol}//${parsedUrl.hostname}`;
+  } catch {
+    // If URL parsing fails, try to construct from input
+    baseUrl = targetUrl.startsWith('http') ? targetUrl : `https://${targetUrl}`;
+    try {
+      const parsedUrl = new URL(baseUrl);
+      baseUrl = `${parsedUrl.protocol}//${parsedUrl.hostname}`;
+    } catch {
+      // Last resort: assume https
+      baseUrl = `https://${url.replace(/^https?:\/\//, '')}`;
+    }
+  }
 
   try {
     // Fetch HTML content and get final URL after redirects
@@ -39,23 +56,28 @@ export async function findFavicons(
     // Extract favicons from HTML (only link tags, no OG images)
     favicons.push(...extractFromLinkTags($, finalBaseUrl));
 
-    // Add common fallback locations
-    favicons.push({
-      url: `${finalBaseUrl}/favicon.ico`,
-      source: 'fallback',
-      score: 10,
-    });
-
-    favicons.push({
-      url: `${finalBaseUrl}/apple-touch-icon.png`,
-      source: 'fallback',
-      score: 20,
-    });
+    // Update baseUrl to final URL after redirects for fallbacks
+    baseUrl = finalBaseUrl;
 
     // Try to fetch and parse manifest.json
     const manifestFavicons = await extractFromManifest(finalBaseUrl, config);
     favicons.push(...manifestFavicons);
-  } catch {}
+  } catch {
+    // HTML fetch failed, but we still have baseUrl for fallbacks
+  }
+
+  // Always add common fallback locations (even if HTML fetch failed)
+  favicons.push({
+    url: `${baseUrl}/favicon.ico`,
+    source: 'fallback',
+    score: 10,
+  });
+
+  favicons.push({
+    url: `${baseUrl}/apple-touch-icon.png`,
+    source: 'fallback',
+    score: 20,
+  });
 
   // Add Google's favicon API as last-resort fallback (if enabled)
   if (config.USE_FALLBACK_API) {
