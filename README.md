@@ -84,7 +84,7 @@ docker run -d \
 ### Single Endpoint
 
 ```
-GET /<domain>&format=<json|image>&size=<number>&type=<png|jpg|svg>&default=<url>
+GET /<domain>&response=<json|image>&size=<number>&format=<png|jpg|webp>&default=<url>
 ```
 
 ### Query Parameters
@@ -105,7 +105,7 @@ curl "http://localhost:3000/github.com"
 **Get favicon metadata as JSON:**
 
 ```bash
-curl "http://localhost:3000/github.com&format=json"
+curl "http://localhost:3000/github.com&response=json"
 ```
 
 **Resize favicon to 64x64:**
@@ -117,7 +117,7 @@ curl "http://localhost:3000/github.com&size=64"
 **Convert to PNG:**
 
 ```bash
-curl "http://localhost:3000/github.com&type=png&size=128"
+curl "http://localhost:3000/github.com&format=png&size=128"
 ```
 
 **With custom fallback:**
