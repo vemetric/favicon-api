@@ -28,7 +28,7 @@ export async function findFavicons(
 
   // Ensure URL has protocol
   const targetUrl = url.startsWith('http') ? url : `https://${url}`;
-  
+
   // Parse base URL - we'll use this for fallbacks even if HTML fetch fails
   let baseUrl: string;
   try {
