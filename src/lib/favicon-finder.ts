@@ -35,15 +35,9 @@ export async function findFavicons(
     const parsedUrl = new URL(targetUrl);
     baseUrl = `${parsedUrl.protocol}//${parsedUrl.hostname}`;
   } catch {
-    // If URL parsing fails, try to construct from input
-    baseUrl = targetUrl.startsWith('http') ? targetUrl : `https://${targetUrl}`;
-    try {
-      const parsedUrl = new URL(baseUrl);
-      baseUrl = `${parsedUrl.protocol}//${parsedUrl.hostname}`;
-    } catch {
-      // Last resort: assume https
-      baseUrl = `https://${url.replace(/^https?:\/\//, '')}`;
-    }
+    // URL parsing failed - construct best-effort base URL from hostname
+    const hostname = url.replace(/^https?:\/\//, '').split('/')[0];
+    baseUrl = `https://${hostname}`;
   }
 
   try {
