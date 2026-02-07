@@ -7,6 +7,7 @@ const DOMAIN_MAPPINGS: Record<string, string> = {
   'com.google.android.googlequicksearchbox': 'google.com',
   'com.google.android.gm': 'gmail.com',
   'com.pinterest': 'pinterest.com',
+  snapchat: 'snapchat.com',
 };
 
 /**
