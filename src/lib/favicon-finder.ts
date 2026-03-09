@@ -16,7 +16,6 @@ import { isDataUrl } from './validators';
 const BROWSER_USER_AGENT =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
 
-
 /**
  * Find all possible favicon URLs for a given website
  */
@@ -64,10 +63,7 @@ export async function findFavicons(
 
   const manifestPromise = extractFromManifest(baseUrl, config, manifestTimeout);
 
-  const [linkTagFavicons, manifestFavicons] = await Promise.all([
-    htmlPromise,
-    manifestPromise,
-  ]);
+  const [linkTagFavicons, manifestFavicons] = await Promise.all([htmlPromise, manifestPromise]);
 
   favicons.push(...linkTagFavicons);
   favicons.push(...manifestFavicons);
