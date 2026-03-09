@@ -16,6 +16,7 @@ import { isDataUrl } from './validators';
 const BROWSER_USER_AGENT =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
 
+
 /**
  * Find all possible favicon URLs for a given website
  */
@@ -40,25 +41,36 @@ export async function findFavicons(
     baseUrl = `https://${hostname}`;
   }
 
-  try {
-    // Fetch HTML content and get final URL after redirects
-    const { html, finalUrl } = await fetchHtml(targetUrl, config);
-    const finalParsedUrl = new URL(finalUrl);
-    const finalBaseUrl = `${finalParsedUrl.protocol}//${finalParsedUrl.hostname}`;
-    const $ = cheerio.load(html);
+  // Fetch HTML and manifest in parallel so a hanging manifest
+  // doesn't block the overall pipeline
+  const htmlTimeout = Math.round(config.REQUEST_TIMEOUT * 0.8);
+  const manifestTimeout = Math.round(config.REQUEST_TIMEOUT * 0.4);
 
-    // Extract favicons from HTML (only link tags, no OG images)
-    favicons.push(...extractFromLinkTags($, finalBaseUrl));
+  const htmlPromise = fetchHtml(targetUrl, config, htmlTimeout)
+    .then(({ html, finalUrl }) => {
+      const finalParsedUrl = new URL(finalUrl);
+      const finalBaseUrl = `${finalParsedUrl.protocol}//${finalParsedUrl.hostname}`;
+      const $ = cheerio.load(html);
 
-    // Update baseUrl to final URL after redirects for fallbacks
-    baseUrl = finalBaseUrl;
+      // Extract favicons from HTML link tags
+      const linkTagFavicons = extractFromLinkTags($, finalBaseUrl);
 
-    // Try to fetch and parse manifest.json
-    const manifestFavicons = await extractFromManifest(finalBaseUrl, config);
-    favicons.push(...manifestFavicons);
-  } catch {
-    // HTML fetch failed, but we still have baseUrl for fallbacks
-  }
+      // Update baseUrl to final URL after redirects for fallbacks
+      baseUrl = finalBaseUrl;
+
+      return linkTagFavicons;
+    })
+    .catch(() => [] as FaviconSource[]);
+
+  const manifestPromise = extractFromManifest(baseUrl, config, manifestTimeout);
+
+  const [linkTagFavicons, manifestFavicons] = await Promise.all([
+    htmlPromise,
+    manifestPromise,
+  ]);
+
+  favicons.push(...linkTagFavicons);
+  favicons.push(...manifestFavicons);
 
   // Always add common fallback locations (even if HTML fetch failed)
   favicons.push({
@@ -98,7 +110,8 @@ export async function findFavicons(
  */
 async function fetchHtml(
   url: string,
-  config: AppConfig
+  config: AppConfig,
+  timeout: number
 ): Promise<{ html: string; finalUrl: string }> {
   // Try with honest USER_AGENT first
   try {
@@ -108,7 +121,7 @@ async function fetchHtml(
         Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.9',
       },
-      signal: AbortSignal.timeout(config.REQUEST_TIMEOUT),
+      signal: AbortSignal.timeout(timeout),
       redirect: 'follow',
     });
 
@@ -128,7 +141,7 @@ async function fetchHtml(
       Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
       'Accept-Language': 'en-US,en;q=0.9',
     },
-    signal: AbortSignal.timeout(config.REQUEST_TIMEOUT),
+    signal: AbortSignal.timeout(timeout),
     redirect: 'follow',
   });
 
@@ -185,7 +198,11 @@ function extractFromLinkTags($: cheerio.CheerioAPI, baseUrl: string): FaviconSou
 /**
  * Extract favicons from web manifest
  */
-async function extractFromManifest(baseUrl: string, config: AppConfig): Promise<FaviconSource[]> {
+async function extractFromManifest(
+  baseUrl: string,
+  config: AppConfig,
+  timeout: number
+): Promise<FaviconSource[]> {
   const favicons: FaviconSource[] = [];
 
   try {
@@ -194,7 +211,7 @@ async function extractFromManifest(baseUrl: string, config: AppConfig): Promise<
       headers: {
         'User-Agent': config.USER_AGENT,
       },
-      signal: AbortSignal.timeout(config.REQUEST_TIMEOUT),
+      signal: AbortSignal.timeout(timeout),
     });
 
     if (response.ok) {
