@@ -2,7 +2,7 @@
 # Uses Bun runtime for fast TypeScript execution
 
 # Build stage
-FROM oven/bun:1.2-slim AS builder
+FROM oven/bun:1.3.11-slim AS builder
 WORKDIR /app
 
 # Copy package files
@@ -12,7 +12,7 @@ COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile --production
 
 # Production stage
-FROM oven/bun:1.2-slim AS production
+FROM oven/bun:1.3.11-slim AS production
 WORKDIR /app
 
 # Install only runtime dependencies for Sharp (not dev packages)
