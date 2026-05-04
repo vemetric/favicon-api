@@ -131,29 +131,24 @@ export function createApp(config: AppConfig) {
 
       const { url, response, size, format, default: defaultImage } = parseResult.data;
 
-      // Find favicons
-      const timeoutPromise = new Promise<null>((resolve) =>
-        setTimeout(() => resolve(null), config.REQUEST_TIMEOUT)
-      );
+      // Find favicons with a request-scoped abort signal so timed-out work
+      // cannot continue in the background after fallback is returned.
       const faviconStart = Date.now();
-      const favicon = await Promise.race([
-        new Promise<{ data: Buffer; format: string; source: string; url: string } | null>(
-          // oxlint-disable-next-line no-async-promise-executor
-          async (resolve) => {
-            try {
-              const favicons = await findFavicons(url, config, size);
-              if (favicons == null || favicons.length === 0) {
-                resolve(null);
-              } else {
-                resolve(await fetchBestFavicon(favicons, config));
-              }
-            } catch {
-              resolve(null);
-            }
-          }
-        ),
-        timeoutPromise,
-      ]);
+      const faviconAbortController = new AbortController();
+      const faviconTimeoutId = setTimeout(
+        () => faviconAbortController.abort(),
+        config.REQUEST_TIMEOUT
+      );
+
+      let favicon: { data: Buffer; format: string; source: string; url: string } | null = null;
+      try {
+        const favicons = await findFavicons(url, config, size, faviconAbortController.signal);
+        if (favicons.length > 0) {
+          favicon = await fetchBestFavicon(favicons, config, faviconAbortController.signal);
+        }
+      } finally {
+        clearTimeout(faviconTimeoutId);
+      }
 
       if (!favicon || !favicon.data) {
         logFaviconFetch({

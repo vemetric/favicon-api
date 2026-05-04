@@ -10,6 +10,8 @@ import type { ImageProcessOptions, ProcessedImage } from '../types';
 import { detectFormatFromBuffer, isIco, isSvg, isGif } from './format-detector';
 import isAnimated from 'is-animated';
 
+sharp.cache({ files: 0, items: 20, memory: 20 });
+
 /**
  * Process image: resize, convert format, optimize
  */

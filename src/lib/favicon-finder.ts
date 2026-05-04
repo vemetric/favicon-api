@@ -8,6 +8,7 @@ import type { FaviconSource, WebManifest } from '../types';
 import type { AppConfig } from './config';
 import { parseDataUrl, validateImage } from './image-processor';
 import { isDataUrl } from './validators';
+import { withTimeout } from './abort-signal';
 
 /**
  * Browser-like User-Agent for HTML parsing (sites often block bots for HTML)
@@ -22,7 +23,8 @@ const BROWSER_USER_AGENT =
 export async function findFavicons(
   url: string,
   config: AppConfig,
-  size?: number
+  size?: number,
+  signal?: AbortSignal
 ): Promise<FaviconSource[]> {
   const favicons: FaviconSource[] = [];
 
@@ -45,7 +47,7 @@ export async function findFavicons(
   const htmlTimeout = Math.round(config.REQUEST_TIMEOUT * 0.8);
   const manifestTimeout = Math.round(config.REQUEST_TIMEOUT * 0.4);
 
-  const htmlPromise = fetchHtml(targetUrl, config, htmlTimeout)
+  const htmlPromise = fetchHtml(targetUrl, config, htmlTimeout, signal)
     .then(({ html, finalUrl }) => {
       const finalParsedUrl = new URL(finalUrl);
       const finalBaseUrl = `${finalParsedUrl.protocol}//${finalParsedUrl.hostname}`;
@@ -61,9 +63,13 @@ export async function findFavicons(
     })
     .catch(() => [] as FaviconSource[]);
 
-  const manifestPromise = extractFromManifest(baseUrl, config, manifestTimeout);
+  const manifestPromise = extractFromManifest(baseUrl, config, manifestTimeout, signal);
 
   const [linkTagFavicons, manifestFavicons] = await Promise.all([htmlPromise, manifestPromise]);
+
+  if (signal?.aborted) {
+    return [];
+  }
 
   favicons.push(...linkTagFavicons);
   favicons.push(...manifestFavicons);
@@ -107,7 +113,8 @@ export async function findFavicons(
 async function fetchHtml(
   url: string,
   config: AppConfig,
-  timeout: number
+  timeout: number,
+  signal?: AbortSignal
 ): Promise<{ html: string; finalUrl: string }> {
   // Try with honest USER_AGENT first
   try {
@@ -117,7 +124,7 @@ async function fetchHtml(
         Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.9',
       },
-      signal: AbortSignal.timeout(timeout),
+      signal: withTimeout(timeout, signal),
       redirect: 'follow',
     });
 
@@ -126,7 +133,10 @@ async function fetchHtml(
       const finalUrl = response.url;
       return { html, finalUrl };
     }
-  } catch {
+  } catch (error) {
+    if (signal?.aborted) {
+      throw error;
+    }
     // First attempt failed, will try with browser UA
   }
 
@@ -137,7 +147,7 @@ async function fetchHtml(
       Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
       'Accept-Language': 'en-US,en;q=0.9',
     },
-    signal: AbortSignal.timeout(timeout),
+    signal: withTimeout(timeout, signal),
     redirect: 'follow',
   });
 
@@ -197,7 +207,8 @@ function extractFromLinkTags($: cheerio.CheerioAPI, baseUrl: string): FaviconSou
 async function extractFromManifest(
   baseUrl: string,
   config: AppConfig,
-  timeout: number
+  timeout: number,
+  signal?: AbortSignal
 ): Promise<FaviconSource[]> {
   const favicons: FaviconSource[] = [];
 
@@ -207,7 +218,7 @@ async function extractFromManifest(
       headers: {
         'User-Agent': config.USER_AGENT,
       },
-      signal: AbortSignal.timeout(timeout),
+      signal: withTimeout(timeout, signal),
     });
 
     if (response.ok) {
@@ -306,9 +317,14 @@ function resolveUrl(url: string, baseUrl: string): string {
  */
 export async function fetchBestFavicon(
   favicons: FaviconSource[],
-  config: AppConfig
+  config: AppConfig,
+  signal?: AbortSignal
 ): Promise<{ data: Buffer; format: string; source: string; url: string } | null> {
   for (const favicon of favicons) {
+    if (signal?.aborted) {
+      return null;
+    }
+
     try {
       let buffer: Buffer;
       let mimeType: string | undefined;
@@ -325,7 +341,7 @@ export async function fetchBestFavicon(
           headers: {
             'User-Agent': config.USER_AGENT,
           },
-          signal: AbortSignal.timeout(config.REQUEST_TIMEOUT),
+          signal: withTimeout(config.REQUEST_TIMEOUT, signal),
         });
 
         if (!response.ok) continue;
@@ -344,6 +360,9 @@ export async function fetchBestFavicon(
         }
       }
     } catch {
+      if (signal?.aborted) {
+        return null;
+      }
       // Try next favicon
       continue;
     }
