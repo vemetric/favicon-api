@@ -211,6 +211,27 @@ describe('Favicon Fetching', () => {
   });
 
   describe('Fallback Image Handling', () => {
+    test('should use fallback cache control for default fallback image responses', async () => {
+      const config = {
+        ...loadConfig(),
+        DEFAULT_IMAGE_URL: undefined,
+        CACHE_CONTROL_SUCCESS: 7200,
+        CACHE_CONTROL_FALLBACK: 3600,
+        CACHE_CONTROL_ERROR: 120,
+        REQUEST_TIMEOUT: 1000,
+        BLOCK_PRIVATE_IPS: false,
+      };
+
+      await initializeFallbackImage(config);
+      const app = createApp(config);
+      const response = await app.request('http://localhost/?response=json');
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('cache-control')).toBe('public, max-age=3600');
+      expect(response.headers.get('cdn-cache-control')).toBe('public, max-age=3600');
+      expect(response.headers.get('content-type')).toBe('image/svg+xml');
+    });
+
     test('should return fallback with original dimensions', async () => {
       const response = await fetchWithTimeout(
         `${baseUrl}/nonexistent-domain-xyz-12345.com?response=json`,
@@ -261,6 +282,9 @@ describe('Favicon Fetching', () => {
       const config = {
         ...loadConfig(),
         DEFAULT_IMAGE_URL: 'none',
+        CACHE_CONTROL_SUCCESS: 7200,
+        CACHE_CONTROL_FALLBACK: 3600,
+        CACHE_CONTROL_ERROR: 120,
         REQUEST_TIMEOUT: 1000,
         BLOCK_PRIVATE_IPS: false,
       };
@@ -270,6 +294,8 @@ describe('Favicon Fetching', () => {
       const response = await app.request('http://localhost/?response=json');
 
       expect(response.status).toBe(404);
+      expect(response.headers.get('cache-control')).toBe('public, max-age=3600');
+      expect(response.headers.get('cdn-cache-control')).toBe('public, max-age=3600');
 
       const data = await response.json();
       expect(data.error).toBe('Favicon not found');

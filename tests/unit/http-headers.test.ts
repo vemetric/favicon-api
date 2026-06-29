@@ -5,7 +5,7 @@
 import { describe, test, expect } from 'bun:test';
 import {
   generateSuccessHeaders,
-  generateDefaultHeaders,
+  generateFallbackHeaders,
   generateErrorHeaders,
 } from '../../src/lib/http-headers';
 import type { AppConfig } from '../../src/lib/config';
@@ -16,6 +16,7 @@ const mockConfig: AppConfig = {
   HOST: '0.0.0.0',
   DEFAULT_IMAGE_URL: 'https://example.com/default.png',
   CACHE_CONTROL_SUCCESS: 604800,
+  CACHE_CONTROL_FALLBACK: 604800,
   CACHE_CONTROL_ERROR: 604800,
   REQUEST_TIMEOUT: 5000,
   MAX_IMAGE_SIZE: 5242880,
@@ -95,31 +96,36 @@ describe('HTTP Headers Utilities', () => {
     });
   });
 
-  describe('generateDefaultHeaders', () => {
-    test('should use success cache control value', () => {
-      const headers = generateDefaultHeaders(mockConfig);
+  describe('generateFallbackHeaders', () => {
+    test('should use fallback cache control value', () => {
+      const headers = generateFallbackHeaders(mockConfig);
 
       expect(headers['Cache-Control']).toBe('public, max-age=604800');
     });
 
     test('should include CDN-Cache-Control header', () => {
-      const headers = generateDefaultHeaders(mockConfig);
+      const headers = generateFallbackHeaders(mockConfig);
 
       expect(headers['CDN-Cache-Control']).toBe('public, max-age=604800');
     });
 
     test('should include Vary header', () => {
-      const headers = generateDefaultHeaders(mockConfig);
+      const headers = generateFallbackHeaders(mockConfig);
 
       expect(headers.Vary).toBe('Accept');
     });
 
-    test('should respect custom cache control config', () => {
-      const customConfig = { ...mockConfig, CACHE_CONTROL_SUCCESS: 7200 };
-      const headers = generateDefaultHeaders(customConfig);
+    test('should respect custom fallback cache control config', () => {
+      const customConfig = {
+        ...mockConfig,
+        CACHE_CONTROL_SUCCESS: 7200,
+        CACHE_CONTROL_FALLBACK: 3600,
+        CACHE_CONTROL_ERROR: 120,
+      };
+      const headers = generateFallbackHeaders(customConfig);
 
-      expect(headers['Cache-Control']).toBe('public, max-age=7200');
-      expect(headers['CDN-Cache-Control']).toBe('public, max-age=7200');
+      expect(headers['Cache-Control']).toBe('public, max-age=3600');
+      expect(headers['CDN-Cache-Control']).toBe('public, max-age=3600');
     });
   });
 

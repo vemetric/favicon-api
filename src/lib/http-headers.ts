@@ -19,12 +19,12 @@ export function generateSuccessHeaders(config: AppConfig, content: Buffer) {
 }
 
 /**
- * Generate cache headers for default/fallback image
+ * Generate cache headers for fallback responses after favicon lookup failed
  */
-export function generateDefaultHeaders(config: AppConfig) {
+export function generateFallbackHeaders(config: AppConfig) {
   return {
-    'Cache-Control': `public, max-age=${config.CACHE_CONTROL_SUCCESS}`,
-    'CDN-Cache-Control': `public, max-age=${config.CACHE_CONTROL_SUCCESS}`,
+    'Cache-Control': `public, max-age=${config.CACHE_CONTROL_FALLBACK}`,
+    'CDN-Cache-Control': `public, max-age=${config.CACHE_CONTROL_FALLBACK}`,
     Vary: 'Accept',
   };
 }

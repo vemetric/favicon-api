@@ -13,7 +13,7 @@ import { processImage } from './lib/image-processor';
 import { queryParamsSchema } from './lib/validators';
 import {
   generateSuccessHeaders,
-  generateDefaultHeaders,
+  generateFallbackHeaders,
   generateErrorHeaders,
 } from './lib/http-headers';
 import { getContentTypeFromFormat } from './lib/format-detector';
@@ -248,7 +248,7 @@ async function handleFallback(
 ) {
   try {
     if (!defaultImage && isDefaultFallbackDisabled(config)) {
-      const headers = generateErrorHeaders(config);
+      const headers = generateFallbackHeaders(config);
       return c.json({ error: 'Favicon not found' }, 404, headers);
     }
 
@@ -305,11 +305,11 @@ async function handleFallback(
         source: 'default',
       };
 
-      const headers = generateDefaultHeaders(config);
+      const headers = generateFallbackHeaders(config);
       return c.json(result, 200, headers);
     }
 
-    const headers = generateDefaultHeaders(config);
+    const headers = generateFallbackHeaders(config);
     const contentType = imageFormat === 'svg' ? 'image/svg+xml' : 'image/png';
     return c.body(new Uint8Array(buffer), 200, {
       ...headers,

@@ -20,6 +20,11 @@ const envSchema = z.object({
     .default('604800')
     .transform(Number)
     .pipe(z.number().int().min(0)),
+  CACHE_CONTROL_FALLBACK: z
+    .string()
+    .default('604800')
+    .transform(Number)
+    .pipe(z.number().int().min(0)),
   CACHE_CONTROL_ERROR: z.string().default('604800').transform(Number).pipe(z.number().int().min(0)),
 
   // Request handling
@@ -68,6 +73,7 @@ export function loadConfig(): AppConfig {
       HOST: process.env.HOST,
       DEFAULT_IMAGE_URL: process.env.DEFAULT_IMAGE_URL,
       CACHE_CONTROL_SUCCESS: process.env.CACHE_CONTROL_SUCCESS,
+      CACHE_CONTROL_FALLBACK: process.env.CACHE_CONTROL_FALLBACK,
       CACHE_CONTROL_ERROR: process.env.CACHE_CONTROL_ERROR,
       REQUEST_TIMEOUT: process.env.REQUEST_TIMEOUT,
       MAX_IMAGE_SIZE: process.env.MAX_IMAGE_SIZE,
