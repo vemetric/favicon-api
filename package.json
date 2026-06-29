@@ -1,6 +1,6 @@
 {
   "name": "@vemetric/favicon-api",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Free and open-source API to fetch favicons from any website. Powered by vemetric.com",
   "type": "module",
   "main": "src/server.ts",
