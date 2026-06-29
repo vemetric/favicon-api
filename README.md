@@ -3,6 +3,7 @@
 # Favicon API
 
 [![CI](https://github.com/vemetric/favicon-api/actions/workflows/ci.yml/badge.svg)](https://github.com/vemetric/favicon-api/actions/workflows/ci.yml)
+![Docker Image Version](https://img.shields.io/docker/v/vemetric/favicon-api)
 
 A free & self-hostable favicon API service built with TypeScript, Hono, and Bun. Fetch and serve website favicons with multiple format options, intelligent fallbacks, and proper HTTP caching.
 
