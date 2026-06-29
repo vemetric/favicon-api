@@ -18,6 +18,10 @@ interface CachedFallback {
 // Singleton instance
 let cachedFallback: CachedFallback | null = null;
 
+export function isDefaultFallbackDisabled(config: AppConfig): boolean {
+  return config.DEFAULT_IMAGE_URL === 'none';
+}
+
 /**
  * Load the local default.svg file from the filesystem
  */
@@ -47,6 +51,12 @@ export async function initializeFallbackImage(config: AppConfig): Promise<void> 
   const fallbackUrl = config.DEFAULT_IMAGE_URL;
 
   try {
+    if (isDefaultFallbackDisabled(config)) {
+      cachedFallback = null;
+      logger.info('Default fallback image disabled');
+      return;
+    }
+
     // Use local default.svg if no fallback URL is provided
     if (!fallbackUrl) {
       cachedFallback = await loadLocalDefaultSvg();

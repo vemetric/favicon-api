@@ -87,7 +87,7 @@ describe('Cache Headers', () => {
       // Extract max-age value
       const match = cacheControl!.match(/max-age=(\d+)/);
       expect(match).toBeDefined();
-      const maxAge = parseInt(match![1], 10);
+      const maxAge = parseInt(match![1]!, 10);
       expect(maxAge).toBeGreaterThan(3600); // At least 1 hour
     });
 
@@ -125,7 +125,7 @@ describe('Cache Headers', () => {
       // Extract max-age value
       const match = cacheControl!.match(/max-age=(\d+)/);
       expect(match).toBeDefined();
-      const maxAge = parseInt(match![1], 10);
+      const maxAge = parseInt(match![1]!, 10);
       expect(maxAge).toBeGreaterThan(0); // Should have some cache time
     });
 

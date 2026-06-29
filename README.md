@@ -130,6 +130,10 @@ curl "http://localhost:3000/example.com&default=https://mysite.com/fallback.png"
 
 Create a `.env` file (see `.env.example`):
 
+- `DEFAULT_IMAGE_URL` unset: use the bundled `default.svg` fallback image
+- `DEFAULT_IMAGE_URL=https://example.com/default-favicon.png`: use a custom fallback image
+- `DEFAULT_IMAGE_URL=none`: disable the default fallback image and return `404` when no favicon is found
+
 ## Architecture
 
 The application is a **stateless processor** with no built-in caching. It:
@@ -251,7 +255,7 @@ When the primary favicon fetch fails (e.g., due to bot protection), the API can 
 
 1. **Primary fetch**: Attempts to fetch favicon from the website's own sources
 2. **Fallback API** (if enabled via `USE_FALLBACK_API=true`): Queries Google's favicon API
-3. **Default image**: Returns the configured default fallback image (or 404 if not configured)
+3. **Default image**: Returns the configured default fallback image, the bundled `default.svg` if no custom default is configured, or `404` when `DEFAULT_IMAGE_URL=none`
 
 The Google API fallback is enabled by default and provides reliable results even for sites with strict bot protection. To disable it, set `USE_FALLBACK_API=false` in your environment configuration.
 

@@ -23,6 +23,7 @@ const mockConfig: AppConfig = {
   ALLOWED_ORIGINS: '*',
   BLOCK_PRIVATE_IPS: true,
   MAX_REDIRECTS: 5,
+  USE_FALLBACK_API: true,
   VEMETRIC_TOKEN: undefined,
   VEMETRIC_HOST: undefined,
   AXIOM_DATASET: undefined,

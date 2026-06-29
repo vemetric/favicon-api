@@ -3,6 +3,9 @@
  */
 
 import { describe, test, expect, beforeAll, afterAll } from 'bun:test';
+import { createApp } from '../../src/index';
+import { loadConfig } from '../../src/lib/config';
+import { initializeFallbackImage } from '../../src/lib/fallback-image';
 import { startTestServer, stopTestServer, fetchWithTimeout } from './setup';
 
 describe('Favicon Fetching', () => {
@@ -252,6 +255,24 @@ describe('Favicon Fetching', () => {
       expect(data.format).toBe('png');
       expect(data.width).toBe(256);
       expect(data.height).toBe(256);
+    });
+
+    test('should return 404 when default fallback image is disabled', async () => {
+      const config = {
+        ...loadConfig(),
+        DEFAULT_IMAGE_URL: 'none',
+        REQUEST_TIMEOUT: 1000,
+        BLOCK_PRIVATE_IPS: false,
+      };
+
+      await initializeFallbackImage(config);
+      const app = createApp(config);
+      const response = await app.request('http://localhost/?response=json');
+
+      expect(response.status).toBe(404);
+
+      const data = await response.json();
+      expect(data.error).toBe('Favicon not found');
     });
   });
 

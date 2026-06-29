@@ -11,8 +11,8 @@ const envSchema = z.object({
   PORT: z.string().default('3000').transform(Number).pipe(z.number().int().min(1).max(65535)),
   HOST: z.string().default('0.0.0.0'),
 
-  // Fallback image
-  DEFAULT_IMAGE_URL: z.string().url().optional(),
+  // Fallback image. Set to "none" to disable the default fallback image.
+  DEFAULT_IMAGE_URL: z.union([z.literal('none'), z.string().url()]).optional(),
 
   // Cache control headers (in seconds) - applies to both browser and CDN
   CACHE_CONTROL_SUCCESS: z

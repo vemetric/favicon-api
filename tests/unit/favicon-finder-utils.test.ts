@@ -68,7 +68,7 @@ describe('Favicon Finder Utilities', () => {
       testCases.forEach(({ input, expected }) => {
         const match = input.match(/(\d+)x\d+/);
         expect(match).not.toBeNull();
-        expect(parseInt(match![1], 10)).toBe(expected);
+        expect(parseInt(match![1]!, 10)).toBe(expected);
       });
     });
   });
@@ -121,7 +121,7 @@ describe('Favicon Finder Utilities', () => {
 
       // Scores should generally increase with size
       for (let i = 1; i < scores.length; i++) {
-        expect(scores[i]).toBeGreaterThanOrEqual(scores[i - 1]);
+        expect(scores[i]!).toBeGreaterThanOrEqual(scores[i - 1]!);
       }
     });
 
@@ -160,8 +160,7 @@ describe('Favicon Finder Utilities', () => {
     test('should identify localhost addresses', () => {
       const localhostAddresses = ['localhost', '127.0.0.1', '::1'];
       localhostAddresses.forEach((addr) => {
-        const isLocalhost =
-          addr === 'localhost' || addr === '127.0.0.1' || addr === '::1';
+        const isLocalhost = addr === 'localhost' || addr === '127.0.0.1' || addr === '::1';
         expect(isLocalhost).toBe(true);
       });
     });

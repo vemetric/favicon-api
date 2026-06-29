@@ -19,7 +19,11 @@ import {
 import { getContentTypeFromFormat } from './lib/format-detector';
 import { logRequest, logFaviconFetch, logger } from './lib/logger';
 import { getClientIp } from './lib/request-ip';
-import { getCachedFallback, fetchCustomDefault } from './lib/fallback-image';
+import {
+  getCachedFallback,
+  fetchCustomDefault,
+  isDefaultFallbackDisabled,
+} from './lib/fallback-image';
 import { resolveDomainMapping } from './lib/domain-mappings';
 
 export function createApp(config: AppConfig) {
@@ -243,6 +247,11 @@ async function handleFallback(
   format?: 'png' | 'jpg' | 'jpeg' | 'ico' | 'webp' | 'svg'
 ) {
   try {
+    if (!defaultImage && isDefaultFallbackDisabled(config)) {
+      const headers = generateErrorHeaders(config);
+      return c.json({ error: 'Favicon not found' }, 404, headers);
+    }
+
     let buffer: Buffer;
     let imageFormat: string;
     let sourceUrl: string;
