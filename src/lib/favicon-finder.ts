@@ -42,6 +42,10 @@ export async function findFavicons(
     baseUrl = `https://${hostname}`;
   }
 
+  // Keep the requested site's base URL: a redirect to another host (e.g. a
+  // sign-in page) must not hide the requested site's own fallback locations
+  const requestedBaseUrl = baseUrl;
+
   // Fetch HTML and manifest in parallel so a hanging manifest
   // doesn't block the overall pipeline
   const htmlTimeout = Math.round(config.REQUEST_TIMEOUT * 0.8);
@@ -86,6 +90,24 @@ export async function findFavicons(
     source: 'fallback',
     score: 20,
   });
+
+  // After a redirect to another host, also try the requested host's own
+  // fallback locations, ranked below every other candidate except the
+  // fallback API (both base URLs are protocol//hostname, so compare the
+  // part after '//')
+  if (requestedBaseUrl.split('//')[1] !== baseUrl.split('//')[1]) {
+    favicons.push({
+      url: `${requestedBaseUrl}/favicon.ico`,
+      source: 'fallback',
+      score: 5,
+    });
+
+    favicons.push({
+      url: `${requestedBaseUrl}/apple-touch-icon.png`,
+      source: 'fallback',
+      score: 8,
+    });
+  }
 
   // Add Google's favicon API as last-resort fallback (if enabled)
   if (config.USE_FALLBACK_API) {
