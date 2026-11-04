@@ -8,28 +8,10 @@ import {
   generateFallbackHeaders,
   generateErrorHeaders,
 } from '../../src/lib/http-headers';
-import type { AppConfig } from '../../src/lib/config';
+import { createTestConfig } from './test-config';
 
-// Mock config for testing
-const mockConfig: AppConfig = {
-  PORT: 3000,
-  HOST: '0.0.0.0',
-  DEFAULT_IMAGE_URL: 'https://example.com/default.png',
-  CACHE_CONTROL_SUCCESS: 604800,
-  CACHE_CONTROL_FALLBACK: 604800,
-  CACHE_CONTROL_ERROR: 604800,
-  REQUEST_TIMEOUT: 5000,
-  MAX_IMAGE_SIZE: 5242880,
-  USER_AGENT: 'TestAgent/1.0',
-  ALLOWED_ORIGINS: '*',
-  BLOCK_PRIVATE_IPS: true,
-  MAX_REDIRECTS: 5,
-  USE_FALLBACK_API: true,
-  VEMETRIC_TOKEN: undefined,
-  VEMETRIC_HOST: undefined,
-  AXIOM_DATASET: undefined,
-  AXIOM_TOKEN: undefined,
-};
+// The header helpers only read the CACHE_CONTROL_* settings
+const mockConfig = createTestConfig();
 
 describe('HTTP Headers Utilities', () => {
   describe('generateSuccessHeaders', () => {

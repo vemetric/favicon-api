@@ -31,20 +31,19 @@ export async function findFavicons(
   // Ensure URL has protocol
   const targetUrl = url.startsWith('http') ? url : `https://${url}`;
 
-  // Parse base URL - we'll use this for fallbacks even if HTML fetch fails
-  let baseUrl: string;
+  // Parse the requested site - we'll use it for fallbacks even if HTML fetch fails.
+  // Use host (not hostname) so a non-default port is kept
+  let requestedHost: string;
+  let requestedBaseUrl: string;
   try {
     const parsedUrl = new URL(targetUrl);
-    baseUrl = `${parsedUrl.protocol}//${parsedUrl.hostname}`;
+    requestedHost = parsedUrl.host;
+    requestedBaseUrl = `${parsedUrl.protocol}//${parsedUrl.host}`;
   } catch {
-    // URL parsing failed - construct best-effort base URL from hostname
-    const hostname = url.replace(/^https?:\/\//, '').split('/')[0];
-    baseUrl = `https://${hostname}`;
+    // URL parsing failed - construct best-effort base URL from host
+    requestedHost = url.replace(/^https?:\/\//, '').split('/')[0] ?? '';
+    requestedBaseUrl = `https://${requestedHost}`;
   }
-
-  // Keep the requested site's base URL: a redirect to another host (e.g. a
-  // sign-in page) must not hide the requested site's own fallback locations
-  const requestedBaseUrl = baseUrl;
 
   // Fetch HTML and manifest in parallel so a hanging manifest
   // doesn't block the overall pipeline
@@ -53,23 +52,21 @@ export async function findFavicons(
 
   const htmlPromise = fetchHtml(targetUrl, config, htmlTimeout, signal)
     .then(({ html, finalUrl }) => {
+      // Resolve link tags against the final URL after redirects
       const finalParsedUrl = new URL(finalUrl);
-      const finalBaseUrl = `${finalParsedUrl.protocol}//${finalParsedUrl.hostname}`;
-      const $ = cheerio.load(html);
+      const finalBaseUrl = `${finalParsedUrl.protocol}//${finalParsedUrl.host}`;
+      const linkTagFavicons = extractFromLinkTags(cheerio.load(html), finalBaseUrl);
 
-      // Extract favicons from HTML link tags
-      const linkTagFavicons = extractFromLinkTags($, finalBaseUrl);
-
-      // Update baseUrl to final URL after redirects for fallbacks
-      baseUrl = finalBaseUrl;
-
-      return linkTagFavicons;
+      return { linkTagFavicons, finalHost: finalParsedUrl.host, finalBaseUrl };
     })
-    .catch(() => [] as FaviconSource[]);
+    .catch(() => ({ linkTagFavicons: [] as FaviconSource[], finalHost: null, finalBaseUrl: null }));
 
-  const manifestPromise = extractFromManifest(baseUrl, config, manifestTimeout, signal);
+  const manifestPromise = extractFromManifest(requestedBaseUrl, config, manifestTimeout, signal);
 
-  const [linkTagFavicons, manifestFavicons] = await Promise.all([htmlPromise, manifestPromise]);
+  const [{ linkTagFavicons, finalHost, finalBaseUrl }, manifestFavicons] = await Promise.all([
+    htmlPromise,
+    manifestPromise,
+  ]);
 
   if (signal?.aborted) {
     return [];
@@ -79,34 +76,14 @@ export async function findFavicons(
   favicons.push(...manifestFavicons);
 
   // Always add common fallback locations (even if HTML fetch failed)
-  favicons.push({
-    url: `${baseUrl}/favicon.ico`,
-    source: 'fallback',
-    score: 10,
-  });
-
-  favicons.push({
-    url: `${baseUrl}/apple-touch-icon.png`,
-    source: 'fallback',
-    score: 20,
-  });
-
-  // After a redirect to another host, also try the requested host's own
-  // fallback locations, ranked below every other candidate except the
-  // fallback API (both base URLs are protocol//hostname, so compare the
-  // part after '//')
-  if (requestedBaseUrl.split('//')[1] !== baseUrl.split('//')[1]) {
-    favicons.push({
-      url: `${requestedBaseUrl}/favicon.ico`,
-      source: 'fallback',
-      score: 5,
-    });
-
-    favicons.push({
-      url: `${requestedBaseUrl}/apple-touch-icon.png`,
-      source: 'fallback',
-      score: 8,
-    });
+  if (finalHost !== null && finalBaseUrl !== null && !isSameSite(requestedHost, finalHost)) {
+    // Redirected to another site (e.g. a sign-in host): the requested site's
+    // own locations come first, the redirect target's locations after them
+    pushFallbacks(favicons, requestedBaseUrl, { appleTouchIcon: 20, favicon: 10 });
+    pushFallbacks(favicons, finalBaseUrl, { appleTouchIcon: 8, favicon: 5 });
+  } else {
+    // Prefer the final base URL so e.g. an http -> https or www redirect is followed
+    pushFallbacks(favicons, finalBaseUrl ?? requestedBaseUrl, { appleTouchIcon: 20, favicon: 10 });
   }
 
   // Add Google's favicon API as last-resort fallback (if enabled)
@@ -126,6 +103,36 @@ export async function findFavicons(
 
   // Sort by score (highest first) and return
   return favicons.sort((a, b) => b.score - a.score);
+}
+
+/**
+ * Whether two hosts belong to the same site, ignoring a leading "www."
+ * (example.com and www.example.com usually serve the same icons)
+ */
+function isSameSite(hostA: string, hostB: string): boolean {
+  const normalize = (host: string) => host.toLowerCase().replace(/^www\./, '');
+  return normalize(hostA) === normalize(hostB);
+}
+
+/**
+ * Add the common fallback locations (/apple-touch-icon.png, /favicon.ico) for a base URL
+ */
+function pushFallbacks(
+  favicons: FaviconSource[],
+  baseUrl: string,
+  scores: { appleTouchIcon: number; favicon: number }
+): void {
+  favicons.push({
+    url: `${baseUrl}/favicon.ico`,
+    source: 'fallback',
+    score: scores.favicon,
+  });
+
+  favicons.push({
+    url: `${baseUrl}/apple-touch-icon.png`,
+    source: 'fallback',
+    score: scores.appleTouchIcon,
+  });
 }
 
 /**
