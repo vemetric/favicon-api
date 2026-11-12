@@ -87,7 +87,10 @@ export const queryParamsSchema = (blockPrivateIps: boolean) =>
           .optional()
       ),
     format: z.enum(['png', 'jpg', 'webp']).optional(),
-    default: z.url('Default image must be a valid URL').optional(),
+    // "none" returns a 404 instead of a fallback image, like DEFAULT_IMAGE_URL=none for a single request.
+    default: z
+      .union([z.literal('none'), z.url('Default image must be a valid URL or "none"')])
+      .optional(),
   });
 
 export type QueryParams = z.infer<ReturnType<typeof queryParamsSchema>>;

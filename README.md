@@ -86,7 +86,7 @@ docker run -d \
 ### Single Endpoint
 
 ```
-GET /<domain>&response=<json|image>&size=<number>&format=<png|jpg|webp>&default=<url>
+GET /<domain>&response=<json|image>&size=<number>&format=<png|jpg|webp>&default=<url|none>
 ```
 
 ### Query Parameters
@@ -94,7 +94,7 @@ GET /<domain>&response=<json|image>&size=<number>&format=<png|jpg|webp>&default=
 - `size` (optional): Desired image size in pixels (16-512)
 - `format` (optional): Image Output format - `png`, `jpg`, `webp`
 - `response` (optional): Response format - `image` (default) or `json`
-- `default` (optional): Fallback image URL (overrides server config)
+- `default` (optional): Fallback image URL, or `none` to get a `404` instead of a fallback image when no favicon is found (overrides server config)
 
 ### Examples
 
@@ -126,6 +126,12 @@ curl "http://localhost:3000/github.com&format=png&size=128"
 
 ```bash
 curl "http://localhost:3000/example.com&default=https://mysite.com/fallback.png"
+```
+
+**Without fallback image** (`404` when no favicon is found, e.g. to show your own placeholder via the image's `onerror`):
+
+```bash
+curl "http://localhost:3000/example.com&default=none"
 ```
 
 ## Configuration

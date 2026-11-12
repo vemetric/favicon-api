@@ -247,7 +247,7 @@ async function handleFallback(
   format?: 'png' | 'jpg' | 'jpeg' | 'ico' | 'webp' | 'svg'
 ) {
   try {
-    if (!defaultImage && isDefaultFallbackDisabled(config)) {
+    if (defaultImage === 'none' || (!defaultImage && isDefaultFallbackDisabled(config))) {
       const headers = generateFallbackHeaders(config);
       return c.json({ error: 'Favicon not found' }, 404, headers);
     }
