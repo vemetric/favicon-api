@@ -300,6 +300,38 @@ describe('Favicon Fetching', () => {
       const data = await response.json();
       expect(data.error).toBe('Favicon not found');
     });
+
+    test('should return 404 when the request disables the default fallback image', async () => {
+      const config = {
+        ...loadConfig(),
+        DEFAULT_IMAGE_URL: undefined,
+        CACHE_CONTROL_FALLBACK: 3600,
+        REQUEST_TIMEOUT: 1000,
+        BLOCK_PRIVATE_IPS: false,
+      };
+
+      await initializeFallbackImage(config);
+      const app = createApp(config);
+
+      for (const response of ['json', 'image']) {
+        const res = await app.request(
+          `http://localhost/nonexistent-domain-xyz-12345.com?response=${response}&default=none`
+        );
+        expect(res.status).toBe(404);
+        expect(res.headers.get('cache-control')).toBe('public, max-age=3600');
+        expect((await res.json()).error).toBe('Favicon not found');
+      }
+    });
+
+    test('should reject a default that is neither a URL nor "none"', async () => {
+      const response = await fetchWithTimeout(
+        `${baseUrl}/nonexistent-domain-xyz-12345.com?default=nothing`,
+        {},
+        15000
+      );
+      expect(response.status).toBe(400);
+      expect((await response.json()).error).toBe('Default image must be a valid URL or "none"');
+    });
   });
 
   describe('URL Format Handling', () => {
