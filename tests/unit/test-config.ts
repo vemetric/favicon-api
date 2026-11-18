@@ -10,6 +10,7 @@ export function createTestConfig(overrides: Partial<AppConfig> = {}): AppConfig 
     HOST: '127.0.0.1',
     CACHE_CONTROL_SUCCESS: 604800,
     CACHE_CONTROL_FALLBACK: 604800,
+    CACHE_CONTROL_TIMEOUT: 3600,
     CACHE_CONTROL_ERROR: 604800,
     REQUEST_TIMEOUT: 2000,
     MAX_IMAGE_SIZE: 5242880,

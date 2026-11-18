@@ -18,6 +18,18 @@ const BROWSER_USER_AGENT =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
 
 /**
+ * Share of REQUEST_TIMEOUT the HTML page may take (both User-Agents together).
+ * The rest is left for downloading the icon itself.
+ */
+const HTML_TIMEOUT_SHARE = 0.7;
+
+/**
+ * Share of REQUEST_TIMEOUT after which a still-pending honest-User-Agent HTML request
+ * gets a browser-User-Agent request started alongside it
+ */
+const BROWSER_UA_DELAY_SHARE = 0.2;
+
+/**
  * Find all possible favicon URLs for a given website
  */
 export async function findFavicons(
@@ -46,11 +58,13 @@ export async function findFavicons(
   }
 
   // Fetch HTML and manifest in parallel so a hanging manifest
-  // doesn't block the overall pipeline
-  const htmlTimeout = Math.round(config.REQUEST_TIMEOUT * 0.8);
+  // doesn't block the overall pipeline. The HTML stage gets less than the whole
+  // request budget so there is still time to download a fallback icon if it stalls
+  const htmlTimeout = Math.round(config.REQUEST_TIMEOUT * HTML_TIMEOUT_SHARE);
+  const browserUaDelay = Math.round(config.REQUEST_TIMEOUT * BROWSER_UA_DELAY_SHARE);
   const manifestTimeout = Math.round(config.REQUEST_TIMEOUT * 0.4);
 
-  const htmlPromise = fetchHtml(targetUrl, config, htmlTimeout, signal)
+  const htmlPromise = fetchHtml(targetUrl, config, htmlTimeout, browserUaDelay, signal)
     .then(({ html, finalUrl }) => {
       // Resolve link tags against the final URL after redirects
       const finalParsedUrl = new URL(finalUrl);
@@ -78,13 +92,19 @@ export async function findFavicons(
   // Always add common fallback locations (even if HTML fetch failed)
   if (finalHost !== null && finalBaseUrl !== null && !isSameSite(requestedHost, finalHost)) {
     // Redirected to another site (e.g. a sign-in host): the requested site's
-    // own locations come first, the redirect target's locations after them
+    // own locations come first, the redirect target's locations after them.
+    // Link tags from the redirect target still rank above both: a moved domain
+    // (vemetrics.com -> vemetric.com) often only redirects its root and lets
+    // /favicon.ico hang, which would use up the whole request budget
     pushFallbacks(favicons, requestedBaseUrl, { appleTouchIcon: 20, favicon: 10 });
     pushFallbacks(favicons, finalBaseUrl, { appleTouchIcon: 8, favicon: 5 });
   } else {
     // Prefer the final base URL so e.g. an http -> https or www redirect is followed
     pushFallbacks(favicons, finalBaseUrl ?? requestedBaseUrl, { appleTouchIcon: 20, favicon: 10 });
   }
+
+  // Sort by score (highest first); the fallback API is added after this, so it stays last
+  favicons.sort((a, b) => b.score - a.score);
 
   // Add Google's favicon API as last-resort fallback (if enabled)
   if (config.USE_FALLBACK_API) {
@@ -101,8 +121,7 @@ export async function findFavicons(
     });
   }
 
-  // Sort by score (highest first) and return
-  return favicons.sort((a, b) => b.score - a.score);
+  return favicons;
 }
 
 /**
@@ -136,47 +155,61 @@ function pushFallbacks(
 }
 
 /**
- * Fetch HTML content from URL and return final URL after redirects
- * First attempts with honest USER_AGENT, falls back to BROWSER_USER_AGENT if needed
+ * Fetch HTML content from URL and return final URL after redirects.
+ * Tries the honest USER_AGENT first. A request with BROWSER_USER_AGENT starts as soon as
+ * that one fails, or alongside it once it has been pending for `browserUaDelay` ms
+ * (some sites stall non-browser clients instead of rejecting them). Both share one
+ * `timeout`, so the HTML stage can never use more than that, and the first OK response wins.
  */
 async function fetchHtml(
   url: string,
   config: AppConfig,
   timeout: number,
+  browserUaDelay: number,
   signal?: AbortSignal
 ): Promise<{ html: string; finalUrl: string }> {
-  // Try with honest USER_AGENT first
+  const deadline = withTimeout(timeout, signal);
+  // Aborts whichever request is still running once one has succeeded
+  const settled = new AbortController();
+  const attemptSignal = AbortSignal.any([deadline, settled.signal]);
+
+  const honest = requestHtml(url, config.USER_AGENT, attemptSignal);
+
+  const browser = new Promise<boolean>((resolve) => {
+    const timer = setTimeout(() => resolve(true), browserUaDelay);
+    honest
+      .then(
+        () => resolve(false),
+        () => resolve(true)
+      )
+      .finally(() => clearTimeout(timer));
+  }).then((start) =>
+    start
+      ? requestHtml(url, BROWSER_USER_AGENT, attemptSignal)
+      : Promise.reject(new Error('Browser User-Agent not needed'))
+  );
+
   try {
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': config.USER_AGENT,
-        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.9',
-      },
-      signal: withTimeout(timeout, signal),
-      redirect: 'follow',
-    });
-
-    if (response.ok) {
-      const html = await response.text();
-      const finalUrl = response.url;
-      return { html, finalUrl };
-    }
+    return await Promise.any([honest, browser]);
   } catch (error) {
-    if (signal?.aborted) {
-      throw error;
-    }
-    // First attempt failed, will try with browser UA
+    throw error instanceof AggregateError ? error.errors[0] : error;
+  } finally {
+    settled.abort();
   }
+}
 
-  // Fallback: Try with browser-like UA if honest UA failed
+async function requestHtml(
+  url: string,
+  userAgent: string,
+  signal: AbortSignal
+): Promise<{ html: string; finalUrl: string }> {
   const response = await fetch(url, {
     headers: {
-      'User-Agent': BROWSER_USER_AGENT,
+      'User-Agent': userAgent,
       Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
       'Accept-Language': 'en-US,en;q=0.9',
     },
-    signal: withTimeout(timeout, signal),
+    signal,
     redirect: 'follow',
   });
 
@@ -184,10 +217,7 @@ async function fetchHtml(
     throw new Error(`HTTP ${response.status}`);
   }
 
-  const html = await response.text();
-  const finalUrl = response.url;
-
-  return { html, finalUrl };
+  return { html: await response.text(), finalUrl: response.url };
 }
 
 /**

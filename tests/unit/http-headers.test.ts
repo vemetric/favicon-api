@@ -109,6 +109,18 @@ describe('HTTP Headers Utilities', () => {
       expect(headers['Cache-Control']).toBe('public, max-age=3600');
       expect(headers['CDN-Cache-Control']).toBe('public, max-age=3600');
     });
+
+    test('should use the timeout cache time when the lookup timed out', () => {
+      const customConfig = {
+        ...mockConfig,
+        CACHE_CONTROL_FALLBACK: 604800,
+        CACHE_CONTROL_TIMEOUT: 300,
+      };
+      const headers = generateFallbackHeaders(customConfig, true);
+
+      expect(headers['Cache-Control']).toBe('public, max-age=300');
+      expect(headers['CDN-Cache-Control']).toBe('public, max-age=300');
+    });
   });
 
   describe('generateErrorHeaders', () => {

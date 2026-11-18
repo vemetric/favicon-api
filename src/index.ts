@@ -153,6 +153,7 @@ export function createApp(config: AppConfig) {
       } finally {
         clearTimeout(faviconTimeoutId);
       }
+      const timedOut = faviconAbortController.signal.aborted;
 
       if (!favicon || !favicon.data) {
         logFaviconFetch({
@@ -164,10 +165,10 @@ export function createApp(config: AppConfig) {
           size,
           success: false,
           duration: Date.now() - faviconStart,
-          error: 'Failed to fetch favicon',
+          error: timedOut ? 'Favicon lookup timed out' : 'Failed to fetch favicon',
           headers: requestHeaders,
         });
-        return handleFallback(c, config, response, defaultImage, size, format);
+        return handleFallback(c, config, response, defaultImage, size, format, timedOut);
       }
 
       // Log successful favicon fetch
@@ -244,11 +245,12 @@ async function handleFallback(
   response: OutputFormat,
   defaultImage?: string,
   size?: number,
-  format?: 'png' | 'jpg' | 'jpeg' | 'ico' | 'webp' | 'svg'
+  format?: 'png' | 'jpg' | 'jpeg' | 'ico' | 'webp' | 'svg',
+  timedOut = false
 ) {
   try {
     if (defaultImage === 'none' || (!defaultImage && isDefaultFallbackDisabled(config))) {
-      const headers = generateFallbackHeaders(config);
+      const headers = generateFallbackHeaders(config, timedOut);
       return c.json({ error: 'Favicon not found' }, 404, headers);
     }
 
@@ -305,11 +307,11 @@ async function handleFallback(
         source: 'default',
       };
 
-      const headers = generateFallbackHeaders(config);
+      const headers = generateFallbackHeaders(config, timedOut);
       return c.json(result, 200, headers);
     }
 
-    const headers = generateFallbackHeaders(config);
+    const headers = generateFallbackHeaders(config, timedOut);
     const contentType = imageFormat === 'svg' ? 'image/svg+xml' : 'image/png';
     return c.body(new Uint8Array(buffer), 200, {
       ...headers,
