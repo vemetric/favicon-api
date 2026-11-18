@@ -13,6 +13,14 @@ import isAnimated from 'is-animated';
 sharp.cache({ files: 0, items: 20, memory: 20 });
 
 /**
+ * Largest image (in pixels) that will be decoded. A favicon never needs more, and sharp's
+ * default (~268M pixels) lets a few hundred KB of PNG decode into about a gigabyte
+ */
+export const MAX_INPUT_PIXELS = 4096 * 4096;
+
+const SHARP_INPUT_OPTIONS = { limitInputPixels: MAX_INPUT_PIXELS };
+
+/**
  * Process image: resize, convert format, optimize
  */
 export async function processImage(
@@ -50,7 +58,7 @@ export async function processImage(
       if (!options.format && !options.size) {
         // Get metadata to extract dimensions
         try {
-          const metadata = await sharp(imageData).metadata();
+          const metadata = await sharp(imageData, SHARP_INPUT_OPTIONS).metadata();
           return {
             data: imageData,
             format: 'gif',
@@ -79,7 +87,7 @@ export async function processImage(
     if (isIco(imageData)) {
       try {
         // Convert ICO to Sharp instance(s), get the largest one
-        const sharpInstances = await sharpsFromIco(imageData);
+        const sharpInstances = await sharpsFromIco(imageData, SHARP_INPUT_OPTIONS);
         if (sharpInstances.length > 0) {
           // Find the largest icon by examining metadata of all instances
           let largestSharp: Sharp | null = null;
@@ -117,7 +125,7 @@ export async function processImage(
     // Try to get original metadata first (helps with error recovery)
     if (!originalMetadata) {
       try {
-        originalMetadata = await sharp(workingBuffer).metadata();
+        originalMetadata = await sharp(workingBuffer, SHARP_INPUT_OPTIONS).metadata();
         detectedFormat = originalMetadata.format || 'png';
       } catch {
         // If we can't read metadata, try to detect format from buffer
@@ -136,7 +144,19 @@ export async function processImage(
       }
     }
 
-    let pipeline = sharp(workingBuffer);
+    // Nothing to change: hand back the image as it is instead of decoding and re-encoding it.
+    // An ICO was already converted to a PNG of its largest entry above
+    if (!options.size && !options.format && originalMetadata) {
+      return {
+        data: workingBuffer,
+        format: workingBuffer === imageData ? originalMetadata.format || detectedFormat : 'png',
+        width: originalMetadata.width || 0,
+        height: originalMetadata.height || 0,
+        bytes: workingBuffer.length,
+      };
+    }
+
+    let pipeline = sharp(workingBuffer, SHARP_INPUT_OPTIONS);
 
     // Resize if size is specified
     if (options.size) {
@@ -227,8 +247,9 @@ export async function validateImage(buffer: Buffer): Promise<boolean> {
       return true;
     }
 
-    await sharp(buffer).metadata();
-    return true;
+    // Reading the header is cheap; reject images too large to decode later
+    const { width = 0, height = 0 } = await sharp(buffer, SHARP_INPUT_OPTIONS).metadata();
+    return width * height <= MAX_INPUT_PIXELS;
   } catch {
     return false;
   }

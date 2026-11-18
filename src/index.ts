@@ -29,6 +29,9 @@ import { resolveDomainMapping } from './lib/domain-mappings';
 export function createApp(config: AppConfig) {
   const app = new Hono();
 
+  // Favicon lookups currently in progress, capped by MAX_CONCURRENT_LOOKUPS
+  let activeLookups = 0;
+
   // CORS middleware
   app.use(
     '*',
@@ -135,102 +138,123 @@ export function createApp(config: AppConfig) {
 
       const { url, response, size, format, default: defaultImage } = parseResult.data;
 
-      // Find favicons with a request-scoped abort signal so timed-out work
-      // cannot continue in the background after fallback is returned.
-      const faviconStart = Date.now();
-      const faviconAbortController = new AbortController();
-      const faviconTimeoutId = setTimeout(
-        () => faviconAbortController.abort(),
-        config.REQUEST_TIMEOUT
-      );
-
-      let favicon: { data: Buffer; format: string; source: string; url: string } | null = null;
-      let htmlTimedOut = false;
-      try {
-        const found = await findFavicons(url, config, size, faviconAbortController.signal);
-        const favicons = found.favicons;
-        htmlTimedOut = found.htmlTimedOut;
-        if (favicons.length > 0) {
-          favicon = await fetchBestFavicon(favicons, config, faviconAbortController.signal);
-        }
-      } finally {
-        clearTimeout(faviconTimeoutId);
-      }
-      // Also counts the HTML page not arriving in time: icons declared only in its
-      // link tags were never seen, so a later retry may still find one
-      const timedOut = faviconAbortController.signal.aborted || htmlTimedOut;
-
-      if (!favicon || !favicon.data) {
+      // Shed load instead of letting lookups pile up: each one holds HTML, image buffers and
+      // sharp decodes in memory. The short timeout cache lets a later retry still succeed
+      if (activeLookups >= config.MAX_CONCURRENT_LOOKUPS) {
         logFaviconFetch({
           url,
-          faviconUrl: favicon?.url,
-          source: favicon?.source,
           response,
-          format: favicon?.format || format,
+          format,
           size,
           success: false,
-          duration: Date.now() - faviconStart,
-          error: timedOut ? 'Favicon lookup timed out' : 'Failed to fetch favicon',
+          duration: 0,
+          error: 'Too many concurrent lookups',
           headers: requestHeaders,
         });
-        return handleFallback(c, config, response, defaultImage, size, format, timedOut);
+        return handleFallback(c, config, response, defaultImage, size, format, true);
       }
 
-      // Log successful favicon fetch
-      logFaviconFetch({
-        url,
-        faviconUrl: favicon.url,
-        response,
-        size,
-        source: favicon.source,
-        format: favicon.format,
-        success: true,
-        duration: Date.now() - faviconStart,
-        headers: requestHeaders,
-      });
+      activeLookups++;
+      try {
+        // Find favicons with a request-scoped abort signal so timed-out work
+        // cannot continue in the background after fallback is returned.
+        const faviconStart = Date.now();
+        const faviconAbortController = new AbortController();
+        const faviconTimeoutId = setTimeout(
+          () => faviconAbortController.abort(),
+          config.REQUEST_TIMEOUT
+        );
 
-      // Process image if needed
-      const processed = await processImage(favicon.data, {
-        size,
-        format,
-      });
-
-      // Return response based on response type
-      if (response === 'json') {
-        // Build API URL for the processed image
-        const requestUrl = new URL(c.req.url);
-        // Use the original path parameter to preserve user input format
-        const apiUrl = new URL(requestUrl.origin + '/' + (c.req.param('url') || url));
-        if (size) {
-          apiUrl.searchParams.set('size', size.toString());
+        let favicon: { data: Buffer; format: string; source: string; url: string } | null = null;
+        let htmlTimedOut = false;
+        try {
+          const found = await findFavicons(url, config, size, faviconAbortController.signal);
+          const favicons = found.favicons;
+          htmlTimedOut = found.htmlTimedOut;
+          if (favicons.length > 0) {
+            favicon = await fetchBestFavicon(favicons, config, faviconAbortController.signal);
+          }
+        } finally {
+          clearTimeout(faviconTimeoutId);
         }
-        if (format) {
-          apiUrl.searchParams.set('format', format);
-        }
-        // Don't include response=json since we want the image URL
+        // Also counts the HTML page not arriving in time: icons declared only in its
+        // link tags were never seen, so a later retry may still find one
+        const timedOut = faviconAbortController.signal.aborted || htmlTimedOut;
 
-        const result: FaviconResult = {
-          url: apiUrl.toString(),
-          sourceUrl: favicon?.url || 'unknown',
-          width: processed.width,
-          height: processed.height,
-          format: processed.format,
-          bytes: processed.bytes,
+        if (!favicon || !favicon.data) {
+          logFaviconFetch({
+            url,
+            faviconUrl: favicon?.url,
+            source: favicon?.source,
+            response,
+            format: favicon?.format || format,
+            size,
+            success: false,
+            duration: Date.now() - faviconStart,
+            error: timedOut ? 'Favicon lookup timed out' : 'Failed to fetch favicon',
+            headers: requestHeaders,
+          });
+          return handleFallback(c, config, response, defaultImage, size, format, timedOut);
+        }
+
+        // Log successful favicon fetch
+        logFaviconFetch({
+          url,
+          faviconUrl: favicon.url,
+          response,
+          size,
           source: favicon.source,
-        };
+          format: favicon.format,
+          success: true,
+          duration: Date.now() - faviconStart,
+          headers: requestHeaders,
+        });
 
+        // Process image if needed
+        const processed = await processImage(favicon.data, {
+          size,
+          format,
+        });
+
+        // Return response based on response type
+        if (response === 'json') {
+          // Build API URL for the processed image
+          const requestUrl = new URL(c.req.url);
+          // Use the original path parameter to preserve user input format
+          const apiUrl = new URL(requestUrl.origin + '/' + (c.req.param('url') || url));
+          if (size) {
+            apiUrl.searchParams.set('size', size.toString());
+          }
+          if (format) {
+            apiUrl.searchParams.set('format', format);
+          }
+          // Don't include response=json since we want the image URL
+
+          const result: FaviconResult = {
+            url: apiUrl.toString(),
+            sourceUrl: favicon?.url || 'unknown',
+            width: processed.width,
+            height: processed.height,
+            format: processed.format,
+            bytes: processed.bytes,
+            source: favicon.source,
+          };
+
+          const headers = generateSuccessHeaders(config, processed.data);
+          return c.json(result, 200, headers);
+        }
+
+        // Return image
         const headers = generateSuccessHeaders(config, processed.data);
-        return c.json(result, 200, headers);
+        const contentType = getContentTypeFromFormat(processed.format);
+
+        return c.body(new Uint8Array(processed.data), 200, {
+          ...headers,
+          'Content-Type': contentType,
+        });
+      } finally {
+        activeLookups--;
       }
-
-      // Return image
-      const headers = generateSuccessHeaders(config, processed.data);
-      const contentType = getContentTypeFromFormat(processed.format);
-
-      return c.body(new Uint8Array(processed.data), 200, {
-        ...headers,
-        'Content-Type': contentType,
-      });
     } catch (error) {
       logger.error({ err: error }, 'Error processing request');
       const headers = generateErrorHeaders(config);
