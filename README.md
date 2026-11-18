@@ -60,6 +60,7 @@ docker run -d \
   -e CACHE_CONTROL_ERROR=604800 \
   -e REQUEST_TIMEOUT=5000 \
   -e MAX_IMAGE_SIZE=5242880 \
+  -e MAX_CONCURRENT_LOOKUPS=50 \
   -e ALLOWED_ORIGINS=* \
   -e BLOCK_PRIVATE_IPS=true \
   vemetric/favicon-api
@@ -144,6 +145,8 @@ Create a `.env` file (see `.env.example`):
 - `DEFAULT_IMAGE_URL=none`: disable the default fallback image and return `404` when no favicon is found
 - `CACHE_CONTROL_FALLBACK`: cache time for fallback responses after favicon lookup fails, including default images and disabled-fallback `404` responses
 - `CACHE_CONTROL_TIMEOUT`: cache time for those fallback responses when the lookup ran out of time (the site's HTML page did not arrive in time, or the whole `REQUEST_TIMEOUT` was used up), since a retry may succeed (default `3600`)
+- `MAX_IMAGE_SIZE`: largest icon or default image that is downloaded, in bytes (default `5242880`). Larger ones are skipped as soon as they pass this size
+- `MAX_CONCURRENT_LOOKUPS`: favicon lookups that may run at the same time (default `50`). Requests beyond that get the fallback response with the `CACHE_CONTROL_TIMEOUT` cache time, so memory use stays bounded under load
 
 ## Architecture
 

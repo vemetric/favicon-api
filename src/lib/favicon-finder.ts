@@ -9,6 +9,7 @@ import type { AppConfig } from './config';
 import { parseDataUrl, validateImage } from './image-processor';
 import { isDataUrl } from './validators';
 import { withTimeout } from './abort-signal';
+import { discardBody, fetchRaw, readBodyLimited, readBodyPrefix } from './bounded-body';
 
 /**
  * Browser-like User-Agent for HTML parsing (sites often block bots for HTML)
@@ -28,6 +29,17 @@ const HTML_TIMEOUT_SHARE = 0.7;
  * gets a browser-User-Agent request started alongside it
  */
 const BROWSER_UA_DELAY_SHARE = 0.2;
+
+/**
+ * Icon link tags live in <head>, so only the start of a page is read. Parsing a whole
+ * multi-megabyte page took about 50x its size in memory and blocked the event loop.
+ */
+export const MAX_HTML_BYTES = 512 * 1024;
+
+/**
+ * Upper bound for a web app manifest (real ones are a few KB)
+ */
+export const MAX_MANIFEST_BYTES = 256 * 1024;
 
 /**
  * Thrown by fetchHtml when the HTML stage ran out of time (rather than getting
@@ -229,7 +241,7 @@ async function requestHtml(
   userAgent: string,
   signal: AbortSignal
 ): Promise<{ html: string; finalUrl: string }> {
-  const response = await fetch(url, {
+  const response = await fetchRaw(url, {
     headers: {
       'User-Agent': userAgent,
       Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -240,10 +252,13 @@ async function requestHtml(
   });
 
   if (!response.ok) {
+    discardBody(response);
     throw new Error(`HTTP ${response.status}`);
   }
 
-  return { html: await response.text(), finalUrl: response.url };
+  // Link tags are ASCII, so decoding as UTF-8 is fine whatever the page's charset
+  const html = (await readBodyPrefix(response, MAX_HTML_BYTES, '</head>')).toString('utf8');
+  return { html, finalUrl: response.url };
 }
 
 /**
@@ -299,15 +314,18 @@ async function extractFromManifest(
 
   try {
     const manifestUrl = `${baseUrl}/manifest.json`;
-    const response = await fetch(manifestUrl, {
+    const response = await fetchRaw(manifestUrl, {
       headers: {
         'User-Agent': config.USER_AGENT,
       },
       signal: withTimeout(timeout, signal),
     });
 
-    if (response.ok) {
-      const manifest = (await response.json()) as WebManifest;
+    if (!response.ok) {
+      discardBody(response);
+    } else {
+      const body = await readBodyLimited(response, MAX_MANIFEST_BYTES);
+      const manifest = JSON.parse(body.toString('utf8')) as WebManifest;
       if (manifest.icons && Array.isArray(manifest.icons)) {
         for (const icon of manifest.icons) {
           if (icon.src) {
@@ -422,17 +440,20 @@ export async function fetchBestFavicon(
         mimeType = parsed.mimeType;
       } else {
         // Regular HTTP(S) URL - fetch it
-        const response = await fetch(favicon.url, {
+        const response = await fetchRaw(favicon.url, {
           headers: {
             'User-Agent': config.USER_AGENT,
           },
           signal: withTimeout(config.REQUEST_TIMEOUT, signal),
         });
 
-        if (!response.ok) continue;
+        if (!response.ok) {
+          discardBody(response);
+          continue;
+        }
 
-        const arrayBuffer = await response.arrayBuffer();
-        buffer = Buffer.from(arrayBuffer);
+        // Throws once the body passes MAX_IMAGE_SIZE, which moves on to the next candidate
+        buffer = await readBodyLimited(response, config.MAX_IMAGE_SIZE);
       }
 
       // Validate buffer size and that it contains valid image data

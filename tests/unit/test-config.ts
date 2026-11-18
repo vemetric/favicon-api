@@ -14,6 +14,7 @@ export function createTestConfig(overrides: Partial<AppConfig> = {}): AppConfig 
     CACHE_CONTROL_ERROR: 604800,
     REQUEST_TIMEOUT: 2000,
     MAX_IMAGE_SIZE: 5242880,
+    MAX_CONCURRENT_LOOKUPS: 50,
     USER_AGENT: 'FaviconAPI/Test',
     ALLOWED_ORIGINS: '*',
     BLOCK_PRIVATE_IPS: false,

@@ -32,6 +32,9 @@ const envSchema = z.object({
   // Request handling
   REQUEST_TIMEOUT: z.string().default('5000').transform(Number).pipe(z.number().int().min(1000)),
   MAX_IMAGE_SIZE: z.string().default('5242880').transform(Number).pipe(z.number().int().min(1024)),
+  // Lookups running at the same time; more get the fallback image (with the short timeout cache)
+  // instead of piling up and running the process out of memory
+  MAX_CONCURRENT_LOOKUPS: z.string().default('50').transform(Number).pipe(z.number().int().min(1)),
   USER_AGENT: z.string().default('FaviconAPI/1.0 (+https://vemetric.com/favicon-api)'),
 
   // CORS
@@ -80,6 +83,7 @@ export function loadConfig(): AppConfig {
       CACHE_CONTROL_ERROR: process.env.CACHE_CONTROL_ERROR,
       REQUEST_TIMEOUT: process.env.REQUEST_TIMEOUT,
       MAX_IMAGE_SIZE: process.env.MAX_IMAGE_SIZE,
+      MAX_CONCURRENT_LOOKUPS: process.env.MAX_CONCURRENT_LOOKUPS,
       USER_AGENT: process.env.USER_AGENT,
       ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS,
       BLOCK_PRIVATE_IPS: process.env.BLOCK_PRIVATE_IPS,

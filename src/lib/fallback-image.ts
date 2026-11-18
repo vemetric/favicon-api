@@ -6,6 +6,7 @@
 import type { AppConfig } from './config';
 import { logger } from './logger';
 import { processImage } from './image-processor';
+import { discardBody, fetchRaw, readBodyLimited } from './bounded-body';
 
 interface CachedFallback {
   buffer: Buffer;
@@ -75,17 +76,17 @@ export async function initializeFallbackImage(config: AppConfig): Promise<void> 
     }
 
     // Fetch default image from URL
-    const response = await fetch(fallbackUrl, {
+    const response = await fetchRaw(fallbackUrl, {
       headers: { 'User-Agent': config.USER_AGENT },
       signal: AbortSignal.timeout(config.REQUEST_TIMEOUT),
     });
 
     if (!response.ok) {
+      discardBody(response);
       throw new Error('Failed to fetch default image');
     }
 
-    const arrayBuffer = await response.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    const buffer = await readBodyLimited(response, config.MAX_IMAGE_SIZE);
     // Detect format from URL or assume PNG
     const format = fallbackUrl.endsWith('.svg') ? 'svg' : 'png';
 
@@ -150,17 +151,17 @@ export async function fetchCustomDefault(
   url: string,
   config: AppConfig
 ): Promise<{ buffer: Buffer; format: string; sourceUrl: string; width: number; height: number }> {
-  const response = await fetch(url, {
+  const response = await fetchRaw(url, {
     headers: { 'User-Agent': config.USER_AGENT },
     signal: AbortSignal.timeout(config.REQUEST_TIMEOUT),
   });
 
   if (!response.ok) {
+    discardBody(response);
     throw new Error('Failed to fetch custom default image');
   }
 
-  const arrayBuffer = await response.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
+  const buffer = await readBodyLimited(response, config.MAX_IMAGE_SIZE);
   // Detect format from URL or assume PNG
   const format = url.endsWith('.svg') ? 'svg' : 'png';
 
