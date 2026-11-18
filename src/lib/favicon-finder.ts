@@ -30,14 +30,27 @@ const HTML_TIMEOUT_SHARE = 0.7;
 const BROWSER_UA_DELAY_SHARE = 0.2;
 
 /**
- * Find all possible favicon URLs for a given website
+ * Thrown by fetchHtml when the HTML stage ran out of time (rather than getting
+ * an error response or a network error)
+ */
+class HtmlTimeoutError extends Error {
+  constructor() {
+    super('HTML request timed out');
+    this.name = 'HtmlTimeoutError';
+  }
+}
+
+/**
+ * Find all possible favicon URLs for a given website.
+ * `htmlTimedOut` is true when the page's HTML did not arrive in time, so icons
+ * declared only in its link tags may have been missed.
  */
 export async function findFavicons(
   url: string,
   config: AppConfig,
   size?: number,
   signal?: AbortSignal
-): Promise<FaviconSource[]> {
+): Promise<{ favicons: FaviconSource[]; htmlTimedOut: boolean }> {
   const favicons: FaviconSource[] = [];
 
   // Ensure URL has protocol
@@ -71,19 +84,27 @@ export async function findFavicons(
       const finalBaseUrl = `${finalParsedUrl.protocol}//${finalParsedUrl.host}`;
       const linkTagFavicons = extractFromLinkTags(cheerio.load(html), finalBaseUrl);
 
-      return { linkTagFavicons, finalHost: finalParsedUrl.host, finalBaseUrl };
+      return {
+        linkTagFavicons,
+        finalHost: finalParsedUrl.host,
+        finalBaseUrl,
+        htmlTimedOut: false,
+      };
     })
-    .catch(() => ({ linkTagFavicons: [] as FaviconSource[], finalHost: null, finalBaseUrl: null }));
+    .catch((error: unknown) => ({
+      linkTagFavicons: [] as FaviconSource[],
+      finalHost: null,
+      finalBaseUrl: null,
+      htmlTimedOut: error instanceof HtmlTimeoutError,
+    }));
 
   const manifestPromise = extractFromManifest(requestedBaseUrl, config, manifestTimeout, signal);
 
-  const [{ linkTagFavicons, finalHost, finalBaseUrl }, manifestFavicons] = await Promise.all([
-    htmlPromise,
-    manifestPromise,
-  ]);
+  const [{ linkTagFavicons, finalHost, finalBaseUrl, htmlTimedOut }, manifestFavicons] =
+    await Promise.all([htmlPromise, manifestPromise]);
 
   if (signal?.aborted) {
-    return [];
+    return { favicons: [], htmlTimedOut };
   }
 
   favicons.push(...linkTagFavicons);
@@ -121,7 +142,7 @@ export async function findFavicons(
     });
   }
 
-  return favicons;
+  return { favicons, htmlTimedOut };
 }
 
 /**
@@ -192,6 +213,11 @@ async function fetchHtml(
   try {
     return await Promise.any([honest, browser]);
   } catch (error) {
+    // Checked on the deadline itself: with both requests failed, error.errors[0] is the
+    // honest one's, which may be an HTTP error while the browser one timed out
+    if (deadline.aborted) {
+      throw new HtmlTimeoutError();
+    }
     throw error instanceof AggregateError ? error.errors[0] : error;
   } finally {
     settled.abort();

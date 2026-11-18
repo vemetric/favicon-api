@@ -145,15 +145,20 @@ export function createApp(config: AppConfig) {
       );
 
       let favicon: { data: Buffer; format: string; source: string; url: string } | null = null;
+      let htmlTimedOut = false;
       try {
-        const favicons = await findFavicons(url, config, size, faviconAbortController.signal);
+        const found = await findFavicons(url, config, size, faviconAbortController.signal);
+        const favicons = found.favicons;
+        htmlTimedOut = found.htmlTimedOut;
         if (favicons.length > 0) {
           favicon = await fetchBestFavicon(favicons, config, faviconAbortController.signal);
         }
       } finally {
         clearTimeout(faviconTimeoutId);
       }
-      const timedOut = faviconAbortController.signal.aborted;
+      // Also counts the HTML page not arriving in time: icons declared only in its
+      // link tags were never seen, so a later retry may still find one
+      const timedOut = faviconAbortController.signal.aborted || htmlTimedOut;
 
       if (!favicon || !favicon.data) {
         logFaviconFetch({

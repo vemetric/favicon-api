@@ -80,7 +80,7 @@ describe('HTML that stalls for the honest User-Agent', () => {
     });
 
     const start = Date.now();
-    const favicons = await findFavicons('https://example.com', config);
+    const { favicons } = await findFavicons('https://example.com', config);
 
     // Browser UA starts after 20% of the budget, well before the 70% HTML deadline
     expect(Date.now() - start).toBeLessThan(1000);
@@ -92,7 +92,7 @@ describe('HTML that stalls for the honest User-Agent', () => {
     stubFetch({ 'https://example.com': () => 'hang' });
 
     const start = Date.now();
-    const favicons = await findFavicons('https://example.com', config);
+    const { favicons } = await findFavicons('https://example.com', config);
 
     // The HTML stage is capped below the request budget
     expect(Date.now() - start).toBeLessThan(900);
@@ -138,6 +138,48 @@ describe('HTML that stalls for the honest User-Agent', () => {
     expect(response.headers.get('cache-control')).toBe('public, max-age=300');
   });
 
+  test('caches the fallback for CACHE_CONTROL_TIMEOUT when only the HTML timed out', async () => {
+    // The icon may be declared in a link tag we never got to see
+    const config = createTestConfig({
+      REQUEST_TIMEOUT: 1000,
+      CACHE_CONTROL_FALLBACK: 604800,
+      CACHE_CONTROL_TIMEOUT: 300,
+    });
+    await initializeFallbackImage(config);
+    stubFetch({ 'https://slow-html.example': () => 'hang' });
+
+    const app = createApp(config);
+    const start = Date.now();
+    const response = await app.request('http://localhost/slow-html.example?response=json');
+    const data = await response.json();
+
+    // Served after the HTML cap, before the request deadline
+    expect(Date.now() - start).toBeLessThan(950);
+    expect(data.source).toBe('default');
+    expect(response.headers.get('cache-control')).toBe('public, max-age=300');
+  });
+
+  test('reports an HTML timeout even when the honest request failed first', async () => {
+    const config = createTestConfig({ REQUEST_TIMEOUT: 1000 });
+    stubFetch({
+      'https://blocked.example': (userAgent) =>
+        userAgent.startsWith(BROWSER_UA_MARKER) ? 'hang' : new Response('no', { status: 403 }),
+    });
+
+    const { htmlTimedOut } = await findFavicons('https://blocked.example', config);
+
+    expect(htmlTimedOut).toBe(true);
+  });
+
+  test('does not report an HTML timeout for an error response', async () => {
+    const config = createTestConfig({ REQUEST_TIMEOUT: 1000 });
+    stubFetch({ 'https://broken.example': () => new Response('error', { status: 500 }) });
+
+    const { htmlTimedOut } = await findFavicons('https://broken.example', config);
+
+    expect(htmlTimedOut).toBe(false);
+  });
+
   test('caches a fallback that did not time out for CACHE_CONTROL_FALLBACK', async () => {
     const config = createTestConfig({
       REQUEST_TIMEOUT: 1000,
@@ -167,7 +209,7 @@ describe('A domain that redirects to another site', () => {
       'https://www.new.example/parent-brand.svg': svg,
     });
 
-    const favicons = await findFavicons('https://moved.example', config);
+    const { favicons } = await findFavicons('https://moved.example', config);
     const result = await fetchBestFavicon(favicons, config);
 
     expect(favicons.map((favicon) => favicon.url)).toEqual([

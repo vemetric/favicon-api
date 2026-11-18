@@ -48,7 +48,7 @@ async function candidateUrls(
   config: AppConfig = createTestConfig()
 ): Promise<string[]> {
   stubFetch(siteUrl, finalUrl);
-  const favicons = await findFavicons(siteUrl, config);
+  const { favicons } = await findFavicons(siteUrl, config);
   return favicons.map((favicon) => favicon.url);
 }
 
@@ -136,7 +136,7 @@ describe('Fallback locations after a redirect', () => {
       'https://login.example.net/favicon.ico': htmlPage,
     });
 
-    const favicons = await findFavicons('https://app.example.com', config);
+    const { favicons } = await findFavicons('https://app.example.com', config);
     const result = await fetchBestFavicon(favicons, config);
 
     expect(result?.url).toBe('https://app.example.com/favicon.ico');

@@ -143,7 +143,7 @@ Create a `.env` file (see `.env.example`):
 - `DEFAULT_IMAGE_URL=https://example.com/default-favicon.png`: use a custom fallback image
 - `DEFAULT_IMAGE_URL=none`: disable the default fallback image and return `404` when no favicon is found
 - `CACHE_CONTROL_FALLBACK`: cache time for fallback responses after favicon lookup fails, including default images and disabled-fallback `404` responses
-- `CACHE_CONTROL_TIMEOUT`: cache time for those fallback responses when the lookup ran out of time (`REQUEST_TIMEOUT`), since a retry may succeed (default `3600`)
+- `CACHE_CONTROL_TIMEOUT`: cache time for those fallback responses when the lookup ran out of time (the site's HTML page did not arrive in time, or the whole `REQUEST_TIMEOUT` was used up), since a retry may succeed (default `3600`)
 
 ## Architecture
 
